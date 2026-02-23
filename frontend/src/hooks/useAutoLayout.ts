@@ -2,9 +2,10 @@ import { useCallback } from "react";
 import dagre from "dagre";
 import { useWorkflowStore } from "../stores/workflowStore";
 import type { WorkflowNode, WorkflowEdge } from "@shared/types/workflow";
+import { DEFAULT_NODE_WIDTH, DEFAULT_NODE_HEIGHT } from "../lib/constants";
 
-const NODE_WIDTH = 180;
-const NODE_HEIGHT = 60;
+const NODE_WIDTH = DEFAULT_NODE_WIDTH;
+const NODE_HEIGHT = DEFAULT_NODE_HEIGHT;
 
 export function useAutoLayout() {
   const { nodes, edges, setNodes } = useWorkflowStore();

@@ -1,54 +1,45 @@
 from __future__ import annotations
 
-from typing import Any
 from uuid import UUID
 
-import asyncpg
+from matrx_orm import MatrxORM
 
-from app.db.models import WorkflowCreate, WorkflowResponse
-
-
-async def list_workflows(conn: asyncpg.Connection) -> list[WorkflowResponse]:
-    rows = await conn.fetch("SELECT * FROM workflows ORDER BY created_at DESC")
-    return [WorkflowResponse(**dict(row)) for row in rows]
+from app.db.models import Workflow
+from app.db.schemas import WorkflowCreate, WorkflowResponse
 
 
-async def get_workflow(conn: asyncpg.Connection, workflow_id: UUID) -> WorkflowResponse | None:
-    row = await conn.fetchrow("SELECT * FROM workflows WHERE id = $1", workflow_id)
-    return WorkflowResponse(**dict(row)) if row else None
+async def list_workflows(db: MatrxORM) -> list[WorkflowResponse]:
+    rows = await db.manager(Workflow).order_by("-created_at").all()
+    return [WorkflowResponse(**row) for row in rows]
 
 
-async def create_workflow(
-    conn: asyncpg.Connection, payload: WorkflowCreate
-) -> WorkflowResponse:
-    row = await conn.fetchrow(
-        """
-        INSERT INTO workflows (name, description, definition)
-        VALUES ($1, $2, $3)
-        RETURNING *
-        """,
-        payload.name,
-        payload.description,
-        payload.definition,
+async def get_workflow(db: MatrxORM, workflow_id: UUID) -> WorkflowResponse | None:
+    row = await db.manager(Workflow).get(id=str(workflow_id))
+    return WorkflowResponse(**row) if row else None
+
+
+async def create_workflow(db: MatrxORM, payload: WorkflowCreate) -> WorkflowResponse:
+    row = await db.manager(Workflow).create(
+        name=payload.name,
+        description=payload.description or "",
+        definition=payload.definition,
+        input_schema=payload.input_schema,
     )
-    return WorkflowResponse(**dict(row))
+    return WorkflowResponse(**row)
 
 
 async def update_workflow(
-    conn: asyncpg.Connection, workflow_id: UUID, payload: WorkflowCreate
+    db: MatrxORM, workflow_id: UUID, payload: WorkflowCreate
 ) -> WorkflowResponse | None:
-    row = await conn.fetchrow(
-        """
-        UPDATE workflows SET name=$1, description=$2, definition=$3, updated_at=now()
-        WHERE id=$4 RETURNING *
-        """,
-        payload.name,
-        payload.description,
-        payload.definition,
-        workflow_id,
+    row = await db.manager(Workflow).update(
+        id=str(workflow_id),
+        name=payload.name,
+        description=payload.description or "",
+        definition=payload.definition,
+        input_schema=payload.input_schema,
     )
-    return WorkflowResponse(**dict(row)) if row else None
+    return WorkflowResponse(**row) if row else None
 
 
-async def delete_workflow(conn: asyncpg.Connection, workflow_id: UUID) -> None:
-    await conn.execute("DELETE FROM workflows WHERE id = $1", workflow_id)
+async def delete_workflow(db: MatrxORM, workflow_id: UUID) -> None:
+    await db.manager(Workflow).delete(id=str(workflow_id))

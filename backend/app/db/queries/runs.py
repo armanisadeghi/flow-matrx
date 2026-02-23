@@ -2,20 +2,19 @@ from __future__ import annotations
 
 from uuid import UUID
 
-import asyncpg
+from matrx_orm import MatrxORM
 
-from app.db.models import RunResponse
-
-
-async def list_runs_for_workflow(
-    conn: asyncpg.Connection, workflow_id: UUID
-) -> list[RunResponse]:
-    rows = await conn.fetch(
-        "SELECT * FROM runs WHERE workflow_id=$1 ORDER BY started_at DESC", workflow_id
-    )
-    return [RunResponse(**dict(row)) for row in rows]
+from app.db.models import Run
+from app.db.schemas import RunResponse
 
 
-async def get_run(conn: asyncpg.Connection, run_id: UUID) -> RunResponse | None:
-    row = await conn.fetchrow("SELECT * FROM runs WHERE id=$1", run_id)
-    return RunResponse(**dict(row)) if row else None
+async def list_runs_for_workflow(db: MatrxORM, workflow_id: UUID) -> list[RunResponse]:
+    rows = await db.manager(Run).filter(
+        workflow_id=str(workflow_id)
+    ).order_by("-started_at").all()
+    return [RunResponse(**row) for row in rows]
+
+
+async def get_run(db: MatrxORM, run_id: UUID) -> RunResponse | None:
+    row = await db.manager(Run).get(id=str(run_id))
+    return RunResponse(**row) if row else None

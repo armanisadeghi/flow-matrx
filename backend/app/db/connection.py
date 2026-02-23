@@ -1,30 +1,32 @@
 from __future__ import annotations
 
-from contextlib import asynccontextmanager
-from typing import AsyncGenerator
-
-import asyncpg
+from matrx_orm import MatrxORM
 
 from app.config import settings
 
-_pool: asyncpg.Pool | None = None
+# Matrx-ORM manages the asyncpg connection pool internally.
+# asyncpg 0.31.x is used as the underlying driver.
+
+_orm: MatrxORM | None = None
 
 
-async def create_pool() -> None:
-    global _pool
-    _pool = await asyncpg.create_pool(settings.database_url, min_size=2, max_size=10)
+async def init_db() -> None:
+    """Initialize Matrx-ORM and the underlying asyncpg connection pool."""
+    global _orm
+    _orm = MatrxORM(settings.database_url, min_size=2, max_size=10)
+    await _orm.connect()
 
 
-async def close_pool() -> None:
-    global _pool
-    if _pool is not None:
-        await _pool.close()
-        _pool = None
+async def close_db() -> None:
+    """Close the Matrx-ORM connection pool."""
+    global _orm
+    if _orm is not None:
+        await _orm.disconnect()
+        _orm = None
 
 
-@asynccontextmanager
-async def get_connection() -> AsyncGenerator[asyncpg.Connection, None]:
-    if _pool is None:
-        raise RuntimeError("Database pool is not initialized")
-    async with _pool.acquire() as conn:
-        yield conn
+def get_db() -> MatrxORM:
+    """Return the active Matrx-ORM instance. Used for dependency injection."""
+    if _orm is None:
+        raise RuntimeError("Database is not initialized. Call init_db() first.")
+    return _orm

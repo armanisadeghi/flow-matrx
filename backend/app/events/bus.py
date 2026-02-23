@@ -19,7 +19,10 @@ class EventBus:
 
     async def emit(self, event_type: str, **kwargs: Any) -> None:
         run_id = str(kwargs.get("run_id", ""))
-        event = {"type": event_type, **{k: str(v) for k, v in kwargs.items()}}
+        event: dict[str, Any] = {"type": event_type}
+        for k, v in kwargs.items():
+            # Preserve dicts/lists as-is; convert everything else to string.
+            event[k] = v if isinstance(v, (dict, list, bool, int, float, type(None))) else str(v)
         for queue in self._subscribers.get(run_id, []):
             await queue.put(event)
 

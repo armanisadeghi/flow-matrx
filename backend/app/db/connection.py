@@ -25,6 +25,6 @@ async def close_pool() -> None:
 @asynccontextmanager
 async def get_connection() -> AsyncGenerator[asyncpg.Connection, None]:
     if _pool is None:
-        raise RuntimeError("Database pool is not initialised")
+        raise RuntimeError("Database pool is not initialized")
     async with _pool.acquire() as conn:
         yield conn

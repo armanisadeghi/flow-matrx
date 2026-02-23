@@ -22,8 +22,16 @@ class HttpRequestHandler(StepHandler):
         async with httpx.AsyncClient(timeout=timeout) as client:
             response = await client.request(method, url, headers=headers, json=body)
             response.raise_for_status()
+            content_type = response.headers.get("content-type", "")
+            if content_type.startswith("application/json"):
+                try:
+                    body_content = response.json()
+                except Exception:
+                    body_content = response.text
+            else:
+                body_content = response.text
             return {
                 "status_code": response.status_code,
                 "headers": dict(response.headers),
-                "body": response.json() if response.headers.get("content-type", "").startswith("application/json") else response.text,
+                "body": body_content,
             }

@@ -57,4 +57,4 @@ def _has_cycle(graph: WorkflowGraph, node_ids: set[str]) -> bool:
         rec_stack.discard(node_id)
         return False
 
-    return any(dfs(n) for n in node_ids if n not in visited)
+    return any(dfs(n) for n in (node_ids - visited))

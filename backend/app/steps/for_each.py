@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 from typing import Any
 
 from app.steps.base import StepHandler
@@ -10,9 +9,14 @@ from app.steps.registry import register_step
 @register_step
 class ForEachHandler(StepHandler):
     step_type = "for_each"
+    metadata = {
+        "label": "For Each",
+        "description": "Iterate over a list of items. Sub-workflow execution is orchestrated by the engine.",
+        "config_schema": {
+            "items": {"type": "array", "required": True},
+        },
+    }
 
-    async def run(self) -> dict[str, Any]:
-        items: list = self.config["items"]
-        # Sub-workflow execution per item is orchestrated by the engine.
-        # This handler returns the items list for iteration tracking.
+    async def execute(self, config: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
+        items: list = config["items"]
         return {"items": items, "count": len(items), "results": []}

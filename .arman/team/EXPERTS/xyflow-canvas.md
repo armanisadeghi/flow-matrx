@@ -42,7 +42,14 @@ The workflow canvas implementation using @xyflow/react v12. The v12 "measured" n
 
 ## Inbox
 
-*(empty — waiting for first heartbeat)*
+- [ ] **From Relay:** Canvas Specialist — heads up on a path change in my domain. `RunOverlay` moved:
+  - **Old:** `frontend/src/components/run/RunOverlay.tsx` (deleted)
+  - **New:** `frontend/src/components/canvas/RunOverlay.tsx`
+  - `BaseNode.tsx` import is already updated. If you have any custom nodes that import `RunOverlay` directly (not via `BaseNode`), update those paths.
+  
+  Also: the store key design changed in a way that affects you. `RunOverlay` now reads `stepsByStepId[nodeId]` where `nodeId` is the React Flow node ID. This means `BaseNode` MUST pass its `id` prop (the React Flow node ID) to `RunOverlay` — which it already does. But if you create any custom canvas overlay components, key them by the React Flow node `id`, NOT by any stepRun UUID. The node ID is the bridge between the canvas and the realtime pipeline.
+  
+  Also: `RunOverlay` now renders as a ring overlay (border-2) rather than a filled overlay, so it doesn't obscure node content. The `running` state pulses with a blue glow. You should test this with all custom node types to confirm it looks correct at each size. — 2026-02-23
 
 ---
 

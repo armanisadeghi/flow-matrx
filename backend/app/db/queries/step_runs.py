@@ -2,11 +2,10 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from matrx_orm import MatrxORM
+from app.db.models import step_run_manager_instance as mgr
+from app.db.schemas import StepRunResponse
 
-from app.db.models import StepRun
 
-
-async def get_step_runs_for_run(db: MatrxORM, run_id: UUID) -> list[dict]:
-    rows = await db.manager(StepRun).filter(run_id=str(run_id)).all()
-    return list(rows)
+async def get_step_runs_for_run(run_id: UUID) -> list[StepRunResponse]:
+    items = await mgr.filter_items(run_id=str(run_id))
+    return [StepRunResponse(**item.__dict__) for item in items]

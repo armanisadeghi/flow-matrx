@@ -1,25 +1,25 @@
-"""Custom exceptions for the workflow engine."""
+from __future__ import annotations
 
 
-class PauseExecution(Exception):
-    """Raised by a step that needs human approval before continuing."""
+class EngineError(Exception):
+    pass
 
-    def __init__(self, step_id: str, approval_prompt: str = "") -> None:
+
+class PauseExecution(EngineError):
+    def __init__(self, step_id: str, reason: str = "") -> None:
         self.step_id = step_id
-        self.approval_prompt = approval_prompt
-        super().__init__(f"Execution paused at step {step_id!r}")
+        self.reason = reason
+        super().__init__(f"Execution paused at step {step_id!r}: {reason}")
 
 
-class StepTimeout(Exception):
-    """Raised when a step exceeds its configured timeout."""
-
-    def __init__(self, step_id: str, timeout_seconds: int) -> None:
+class StepTimeout(EngineError):
+    def __init__(self, step_id: str, timeout_seconds: float) -> None:
         self.step_id = step_id
         self.timeout_seconds = timeout_seconds
-        super().__init__(
-            f"Step {step_id!r} timed out after {timeout_seconds}s"
-        )
+        super().__init__(f"Step {step_id!r} timed out after {timeout_seconds}s")
 
 
-class WorkflowValidationError(Exception):
-    """Raised when a workflow definition fails validation."""
+class WorkflowValidationError(EngineError):
+    def __init__(self, errors: list[str]) -> None:
+        self.errors = errors
+        super().__init__(f"Workflow validation failed: {'; '.join(errors)}")

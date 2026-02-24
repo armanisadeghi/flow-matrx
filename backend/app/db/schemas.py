@@ -1,23 +1,18 @@
-"""
-Pydantic schemas for API request/response serialization.
-
-These are NOT ORM models. For ORM model definitions see db/models/.
-"""
 from __future__ import annotations
 
 from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
-# ── Workflow schemas ──────────────────────────────────────────────────────────
+# -- Workflow schemas ----------------------------------------------------------
 
 class WorkflowCreate(BaseModel):
     name: str
     description: str | None = None
-    definition: dict[str, Any]
+    definition: dict[str, Any] = Field(default_factory=lambda: {"nodes": [], "edges": []})
     input_schema: dict[str, Any] | None = None
 
 
@@ -41,7 +36,7 @@ class WorkflowResponse(BaseModel):
     updated_at: datetime
 
 
-# ── Run schemas ───────────────────────────────────────────────────────────────
+# -- Run schemas ---------------------------------------------------------------
 
 class TriggerRunRequest(BaseModel):
     input: dict[str, Any] | None = None
@@ -62,7 +57,12 @@ class RunResponse(BaseModel):
     created_at: datetime
 
 
-# ── StepRun schemas ───────────────────────────────────────────────────────────
+class ResumeRunRequest(BaseModel):
+    step_id: str
+    approval_data: dict[str, Any] | None = None
+
+
+# -- StepRun schemas -----------------------------------------------------------
 
 class StepRunResponse(BaseModel):
     id: UUID
@@ -79,7 +79,7 @@ class StepRunResponse(BaseModel):
     created_at: datetime
 
 
-# ── RunEvent schemas ──────────────────────────────────────────────────────────
+# -- RunEvent schemas ----------------------------------------------------------
 
 class RunEventResponse(BaseModel):
     id: UUID
@@ -90,8 +90,19 @@ class RunEventResponse(BaseModel):
     created_at: datetime
 
 
-# ── Misc ──────────────────────────────────────────────────────────────────────
+# -- Validation ----------------------------------------------------------------
 
-class ResumeRunRequest(BaseModel):
-    step_id: str
-    approval_data: dict[str, Any] | None = None
+class ValidationResult(BaseModel):
+    valid: bool
+    errors: list[str]
+
+
+# -- Catalog -------------------------------------------------------------------
+
+class StepTypeInfo(BaseModel):
+    type: str
+    label: str
+    icon: str
+    category: str
+    description: str
+    config_schema: dict[str, Any] = Field(default_factory=dict)

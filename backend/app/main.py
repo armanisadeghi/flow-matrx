@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.router import router
 from app.config import settings
-from app.db.connection import init_db, close_db
+import app.db.connection  # noqa: F401 — registers the database on import
 
 logger = structlog.get_logger(__name__)
 
@@ -13,10 +13,8 @@ logger = structlog.get_logger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Starting up Flow Matrx backend")
-    await init_db()
     yield
     logger.info("Shutting down Flow Matrx backend")
-    await close_db()
 
 
 app = FastAPI(

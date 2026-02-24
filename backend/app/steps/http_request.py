@@ -11,13 +11,24 @@ from app.steps.registry import register_step
 @register_step
 class HttpRequestHandler(StepHandler):
     step_type = "http_request"
+    metadata = {
+        "label": "HTTP Request",
+        "description": "Send an HTTP request to an external URL and return the response.",
+        "config_schema": {
+            "url": {"type": "string", "required": True},
+            "method": {"type": "string", "default": "GET"},
+            "headers": {"type": "object", "default": {}},
+            "body": {"type": "any", "default": None},
+            "timeout_seconds": {"type": "number", "default": 30},
+        },
+    }
 
-    async def run(self) -> dict[str, Any]:
-        method: str = self.config.get("method", "GET").upper()
-        url: str = self.config["url"]
-        headers: dict = self.config.get("headers", {})
-        body: Any = self.config.get("body")
-        timeout: float = float(self.config.get("timeout_seconds", 30))
+    async def execute(self, config: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
+        method: str = config.get("method", "GET").upper()
+        url: str = config["url"]
+        headers: dict = config.get("headers", {})
+        body: Any = config.get("body")
+        timeout: float = float(config.get("timeout_seconds", 30))
 
         async with httpx.AsyncClient(timeout=timeout) as client:
             response = await client.request(method, url, headers=headers, json=body)

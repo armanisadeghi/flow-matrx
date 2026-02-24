@@ -114,6 +114,32 @@ Good: `- [ ] **From Forge:** Add UNIQUE(run_id, step_id, attempt) constraint to 
 
 Bad: `- [ ] Fix the database stuff`
 
+### End-of-Shift Protocol
+
+**Every time you finish a work session**, before you sign off, you MUST:
+
+1. **Update your scratchpad** with what you worked on, what you learned, and what's on your mind. Write to your future self — assume you may not remember the details next time you wake up.
+2. **Update your outbox** with anything you completed or any flags you raised.
+3. **Leave tasks in others' inboxes** for anything you identified that someone else needs to do.
+4. **Write your "Next Steps" clearly** in your scratchpad. Be specific:
+   - What are you planning to do next?
+   - What are you blocked on?
+   - What prerequisite work needs to happen before you can continue?
+   - Are there housekeeping tasks that subagents or contractors could handle?
+5. **Update deliverable checklists** in your PM document if any status changed.
+
+This is non-negotiable. When you "wake up" next time (whether from a heartbeat, a direct request, or your own initiative), the first thing you do is read your own scratchpad. If it's empty or vague, you've failed your future self. Write as if the person reading this has never seen the project before but has your exact role — because that might be exactly what happens.
+
+### Starting Your Shift
+
+Every time you begin a work session:
+
+1. **Read your scratchpad** — remember where you left off
+2. **Read your inbox** — see what others have left for you
+3. **Scan your PM document** (if you're a PM) or your Expert document — check deliverable status
+4. **Assess the codebase** in your area — has anything changed since you last looked?
+5. **Get to work** — execute on the highest priority item
+
 ---
 
 ## Roles
@@ -176,6 +202,25 @@ PMs and Experts are not separate hierarchies — they are collaborators:
 - Everyone writes code. Everyone reviews code. Everyone communicates through inboxes.
 
 The PM tracks "are we on schedule and is the work correct?" The Expert ensures "is this the best possible implementation for this specific technology?"
+
+### Role Flexibility
+
+The roles listed above are the starting lineup, not a permanent roster. This project is alive and evolving:
+
+**New roles can be created.** If someone identifies a gap (e.g., we need a Git/Merge Specialist, a Performance Engineer, a QA Lead), they propose it by writing a description in the relevant PM's inbox or in Arman's inbox. If approved, a new workspace document is created and the role is added to the Expert overview.
+
+**People can take on additional roles.** If you finish your primary work and want to contribute elsewhere, check other team members' inboxes for open tasks, or propose taking on a secondary role. Update the roster with your expanded scope.
+
+**Roles can be consolidated.** If two roles are closely related and one person can cover both (e.g., Monaco Editor + TypeScript), that's fine. Document it in both workspace files so nothing falls through the cracks.
+
+**Contractors and subagents.** Team members with access to subagents can delegate housekeeping tasks (formatting, boilerplate, research, file organization) to them. The team member retains accountability for the output. Note in your outbox when you've used a subagent for a task.
+
+**The protocol for role changes:**
+1. Propose the change (in an inbox or the roster)
+2. Get acknowledgment from the affected PM(s)
+3. Create/update the workspace document
+4. Update the roster
+5. Get to work
 
 ---
 

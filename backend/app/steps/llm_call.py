@@ -9,15 +9,27 @@ from app.steps.base import StepHandler
 from app.steps.registry import register_step
 
 
+# From Arman: This is only a placeholder. No need to make updates, since it will be reaplced with our real implementation.
+
 @register_step
 class LLMCallHandler(StepHandler):
     step_type = "llm_call"
+    metadata = {
+        "label": "LLM Call",
+        "description": "Call a large language model and return the generated text.",
+        "config_schema": {
+            "provider": {"type": "string", "default": "openai"},
+            "model": {"type": "string", "default": "gpt-4o"},
+            "messages": {"type": "array", "required": True},
+            "temperature": {"type": "number", "default": 0.7},
+        },
+    }
 
-    async def run(self) -> dict[str, Any]:
-        provider: str = self.config.get("provider", "openai")
-        model: str = self.config.get("model", "gpt-4o")
-        messages: list = self.config.get("messages", [])
-        temperature: float = float(self.config.get("temperature", 0.7))
+    async def execute(self, config: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
+        provider: str = config.get("provider", "openai")
+        model: str = config.get("model", "gpt-4o")
+        messages: list = config.get("messages", [])
+        temperature: float = float(config.get("temperature", 0.7))
 
         if provider == "openai":
             return await self._call_openai(model, messages, temperature)

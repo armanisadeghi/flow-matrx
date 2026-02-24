@@ -11,11 +11,20 @@ from app.steps.registry import register_step
 @register_step
 class WebhookHandler(StepHandler):
     step_type = "webhook"
+    metadata = {
+        "label": "Webhook",
+        "description": "Send a webhook POST request to an external URL.",
+        "config_schema": {
+            "url": {"type": "string", "required": True},
+            "payload": {"type": "object", "default": {}},
+            "secret": {"type": "string", "default": ""},
+        },
+    }
 
-    async def run(self) -> dict[str, Any]:
-        url: str = self.config["url"]
-        payload: dict = self.config.get("payload", {})
-        secret: str = self.config.get("secret", "")
+    async def execute(self, config: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
+        url: str = config["url"]
+        payload: dict = config.get("payload", {})
+        secret: str = config.get("secret", "")
         headers: dict = {"Content-Type": "application/json"}
         if secret:
             headers["X-Webhook-Secret"] = secret

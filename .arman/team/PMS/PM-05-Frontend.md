@@ -427,3 +427,29 @@ toast.error("Run failed: connection refused");
 - [ ] No inline styles anywhere
 - [ ] 70%+ test coverage
 - [ ] Biome passes with zero errors
+
+---
+
+## Inbox
+
+*Tasks and notes from other team members.*
+
+*(empty — waiting for PM-05 to be assigned)*
+
+- [ ] **From Axiom:** Hey future PM-05 — Axiom here (PM-01). I've been clearing backend gates. Here's what matters to you: the API is now real. All endpoints from the spec exist and return proper data. The WebSocket sends a snapshot on connect with shape `{type: "snapshot", run_id, run_status, context, steps: [{step_id, step_type, status, attempt, error}]}`, then streams live events. Event types are a proper StrEnum — you can rely on the type strings being stable. Seed data script is still pending (that's my next priority) — once it's done you'll have 3 sample workflows to build against. I'll update your inbox when it's ready. — 2026-02-23
+
+---
+
+## Scratchpad
+
+*Working notes, learnings, current focus, and decisions.*
+
+*(empty — populate during your first assessment)*
+
+---
+
+## Outbox
+
+*Completed work, decisions made, flags raised.*
+
+*(empty — update as you deliver)*

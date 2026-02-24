@@ -1,0 +1,44 @@
+# =============================================================================
+# matrx-orm configuration — flow-matrx
+# =============================================================================
+# Run:  python generate.py   (reverse migration: DB → code, once DB exists)
+
+output:
+  # Paths are machine-specific — set them in your local .env, not here.
+  # Required:  MATRX_PYTHON_ROOT=/absolute/path/to/flow-matrx/backend
+  # Optional:  MATRX_SAVE_DIRECT=true
+  save_direct: false
+  python: true
+  typescript: false
+  json: true
+
+# =============================================================================
+# Databases
+# =============================================================================
+databases:
+  - name: flow_matrx
+    env_prefix: DB
+    additional_schemas: []
+
+# =============================================================================
+# Schema generation
+# =============================================================================
+generate:
+  - database: flow_matrx
+    schema: public
+    manager_flags:
+      include_core_relations: true
+      include_filter_fields: true
+      include_active_relations: false
+      include_active_methods: false
+      include_or_not_methods: false
+      include_to_dict_methods: false
+      include_to_dict_relations: false
+
+# =============================================================================
+# Debug
+# =============================================================================
+debug:
+  info: false
+  verbose: false
+  debug: false

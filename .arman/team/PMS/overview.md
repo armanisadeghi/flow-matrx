@@ -1,19 +1,13 @@
-# Proposal 2: Flow Matrx — Project Management Plan
+# Flow Matrx — Project Management Plan
 
-A structured, role-based execution plan for building the Flow Matrx visual workflow engine. Five project managers own distinct tracks with clear deliverables, dependencies, and handoffs.
-
----
-
-## What This Is
-
-Proposal 2 breaks the Flow Matrx build into **5 parallel-ready tracks**, each with a dedicated PM, scope, and ordered deliverables. Tracks are sequenced so the foundation (DB, engine) unblocks API and frontend. Within each track, work is ordered by priority so teams can start immediately and ship incrementally.
+Five project managers own distinct tracks with clear deliverables, dependencies, and handoffs. Each PM is a full engineer who writes code AND coordinates their track.
 
 ---
 
 ## The Five Tracks
 
-| Track | Role | Scope | Critical Output |
-|-------|------|-------|-----------------|
+| PM | Track | Scope | Critical Output |
+|----|-------|-------|-----------------|
 | **PM-01** | Database & Infrastructure | Schema, migrations, Docker, Redis, Supabase Auth, seed data | 4 tables migrated, Docker Compose running, seed workflows |
 | **PM-02** | Execution Engine | Engine loop, graph utilities, templates, validation, event bus | `WorkflowEngine`, Event Bus, validation function |
 | **PM-03** | Step Handlers & Plugin System | Base class, 10 handlers, registry, catalog | `STEP_REGISTRY`, `STEP_CATALOG`, all handler implementations |
@@ -22,21 +16,40 @@ Proposal 2 breaks the Flow Matrx build into **5 parallel-ready tracks**, each wi
 
 ---
 
+## What PMs Do
+
+A PM is not just a coordinator — they are a full engineer with management responsibilities:
+
+**~50% Implementation**
+- Write production code in their track
+- Write tests for their track
+- Fix bugs in their track
+
+**~50% Coordination**
+- Review code that touches their track
+- Create specific, actionable tasks for Experts and leave them in Expert inboxes
+- Track progress against deliverables and update their PM document
+- Identify blockers and coordinate handoffs with other PMs
+- Ensure documentation stays current
+- Verify that coordination gates are met before signaling "clear"
+
+---
+
 ## Dependency Graph
 
 ```
 PM-01 (Database & Infrastructure)
-    │
-    ├──► PM-02 (Engine) ─────────────────┐
-    │         │                          │
-    │         └──► PM-03 (Handlers)      │
-    │                   │                │
-    │                   └────────────────┼──► PM-04 (API) ──► PM-05 (Frontend)
-    │                                     │
-    └─────────────────────────────────────┘
+    |
+    ├──> PM-02 (Execution Engine) ──────────────┐
+    |         |                                  |
+    |         └──> PM-03 (Step Handlers)         |
+    |                    |                       |
+    |                    └───────────────────────┼──> PM-04 (API Layer) ──> PM-05 (Frontend)
+    |                                            |
+    └────────────────────────────────────────────┘
 ```
 
-- **PM-01** is the root: schema, Docker, Redis, Supabase Auth, and seed data must exist before anyone can write DB queries or develop against real data.
+- **PM-01** is the root. Schema, Docker, Redis, Supabase Auth, and seed data must exist before anyone can write DB queries or develop against real data.
 - **PM-02** depends on PM-01 (schema, Redis). PM-03 depends on PM-02 (base class contract).
 - **PM-04** depends on PM-01, PM-02, and PM-03. It consumes the engine, event bus, validation, and step catalog.
 - **PM-05** depends on PM-01 (seed data) and PM-04 (API shapes, WebSocket format, catalog).
@@ -54,6 +67,24 @@ PM-01 (Database & Infrastructure)
 | Redis running | PM-01 | PM-02 |
 | Event Bus built | PM-02 | PM-04 (WebSocket) |
 | Step Registry + Catalog | PM-03 | PM-04 (catalog endpoint) |
+
+**When a gate is cleared:**
+1. Update the deliverable checklist in your PM document
+2. Write in the blocked PM's inbox: "Gate cleared: [gate name]"
+3. Note it in your outbox
+
+---
+
+## PM ↔ Expert Interaction
+
+PMs and Experts are collaborators, not separate hierarchies:
+
+- **PM → Expert:** PM identifies a deliverable that needs deep expertise. PM writes a specific task in the Expert's inbox.
+- **Expert → PM:** Expert completes the work, updates their outbox, and flags any issues found. PM reviews and updates deliverable status.
+- **Expert → PM (proactive):** Expert scans the codebase, finds a problem in the PM's track, writes a task or flag in the PM's inbox.
+- **Cross-expert:** An Expert finds something outside their scope and leaves it in another Expert's inbox directly.
+
+The PM tracks "are we on schedule and is the work correct?" The Expert ensures "is this the best possible implementation for this specific technology?"
 
 ---
 
@@ -81,8 +112,8 @@ PM-01 (Database & Infrastructure)
 
 ## Document Index
 
-- [PM-01: Database & Infrastructure](./PM-01-Database-Infrastructure.md) — Schema, migrations, Docker, Redis, Supabase, seed data
-- [PM-02: Execution Engine](./PM-02-Execution-Engine.md) — Engine loop, graph, templates, validation, event bus
-- [PM-03: Step Handlers & Plugin System](./PM-03-Step-Handlers.md) — Base class, 10 handlers, registry, catalog
-- [PM-04: API Layer & WebSocket](./PM-04-API-Layer.md) — REST, WebSocket, auth, idempotency
-- [PM-05: Frontend](./PM-05-Frontend.md) — Canvas, nodes, panels, run viewer, 4 pages
+- [PM-01: Database & Infrastructure](./PM-01-Database-Infrastructure.md)
+- [PM-02: Execution Engine](./PM-02-Execution-Engine.md)
+- [PM-03: Step Handlers & Plugin System](./PM-03-Step-Handlers.md)
+- [PM-04: API Layer & WebSocket](./PM-04-API-Layer.md)
+- [PM-05: Frontend](./PM-05-Frontend.md)

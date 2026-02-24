@@ -1,5 +1,5 @@
 import { Handle, Position, type NodeProps } from "@xyflow/react";
-import RunOverlay from "../components/run/RunOverlay";
+import RunOverlay from "../components/canvas/RunOverlay";
 
 interface BaseNodeData {
   label: string;

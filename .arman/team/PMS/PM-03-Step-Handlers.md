@@ -301,6 +301,25 @@ All 5 must be committed together. You cannot add a step type without all artifac
 
 *Tasks and notes from other team members.*
 
+- [ ] **From Project Management (2026-02-27):** Vertex — the project audit is complete. Your track is at ~55%. Here are your specific next steps:
+
+  **PRIORITY 1 — Fix the 3 failing tests:**
+  `test_validate_output_non_serializable`, `test_http_get_request`, `test_openai_llm_call` all fail due to AsyncMock vs MagicMock mismatch. httpx's `response.json()` and `response.raise_for_status()` are SYNC methods — mock them with `MagicMock`, not `AsyncMock`. Fix these first so we have a green test suite.
+
+  **PRIORITY 2 — Consolidate duplicate catalog code:**
+  You created `backend/app/steps/catalog.py` but Conduit added `STEP_CATALOG` directly to `backend/app/steps/registry.py` (which is where the spec says it should live). Delete `catalog.py` and make the catalog endpoint read from `registry.py`. One source of truth.
+
+  **PRIORITY 3 — Decide: engine validates or handler validates?**
+  Forge is asking: should `validate_output()` be called in the handler's `execute()` method or in the engine's `_execute_step()`? The engine already calls it (see `executor.py` line ~1560: `result = handler.validate_output(result)`). So handlers do NOT need to self-validate. Confirm this and close the item.
+
+  **PRIORITY 4 — Wire database_query handler properly:**
+  Currently expects `__db_conn__` in context but the executor never injects it. Work with Forge to decide the injection point. Options: (a) engine injects pool into context, (b) handler receives it separately.
+
+  **PRIORITY 5 — Mark stub handlers clearly:**
+  `for_each.py`, `wait_for_event.py`, and `send_email.py` are stubs. Add `# STUB: Not yet implemented — returns mock data` comments at the top of each so no one treats them as complete.
+
+  Refer to `.arman/PROJECT-STATUS.md` for the full gap analysis. — PM
+
 - [ ] **From Forge:** Vertex — engine integration is confirmed. The contract boundary is correct: engine calls `handler.execute(resolved_config, context)`, handler returns a `dict`, engine writes `context[node_id] = output` and emits events. Your handlers are being called correctly. Two things: (1) **3 tests failing in `test_steps.py`** — `test_validate_output_non_serializable`, `test_http_get_request`, and `test_openai_llm_call`. All are mock setup issues. The `AsyncMock` for `response.json` and `response.raise_for_status` produces coroutines that need to be `await`'d, but the handler code calls `.json()` (sync) and `.raise_for_status()` (sync). The mocks should use `MagicMock` not `AsyncMock` for those sync methods, or the handler code should be `await response.json()`. Check which is correct against httpx's actual API. (2) **`validate_output` is called from the engine**, right? I don't see it in the execution loop — should it be? If handlers are supposed to self-validate, we need to ensure every handler calls `self.validate_output(output)` before returning. If the engine should validate, I'll add it to `_execute_step`. Let me know your preference. — 2026-02-24
 
 - [ ] **From Conduit:** Hey Vertex — Conduit here, PM-04 (API Layer). I've added `STEP_CATALOG` directly in `backend/app/steps/registry.py` with icon (Lucide names) and category fields for all 12 step types. I saw you created a separate `catalog.py` module with `get_step_catalog()` — we should consolidate. The spec says the catalog lives in `registry.py` alongside `STEP_REGISTRY`. My `catalog.py` endpoint in `backend/app/api/catalog.py` now reads from `STEP_CATALOG` in the registry and merges `config_schema` from handler metadata. Please review and ensure the icon/category assignments match what PM-05 needs for the frontend palette. Also: the `StepTypeInfo` schema now has `icon: str` and `category: str` fields — make sure your catalog module aligns or we drop the duplicate. — 2026-02-24

@@ -282,6 +282,22 @@ One test per event type verifying:
 
 *Tasks and notes from other team members.*
 
+- [ ] **From Project Management (2026-02-27):** Forge — the project audit is complete. Your track is the most mature (~70%), and your 59 tests are the gold standard. Here are your specific next steps:
+
+  **PRIORITY 1 — Fix the approval-to-context bridge (you identified this):**
+  When `POST /runs/{id}/resume` is called, approval data MUST be written to `context[step_id]` before re-launching the engine. Without this, `{{approval_step.field}}` templates break with StrictUndefined. Coordinate with Conduit — this is a one-line fix in `runs.py` resume endpoint.
+
+  **PRIORITY 2 — Run the new chained integration tests:**
+  A chained integration test file has been created at `backend/tests/integration/test_full_pipeline.py`. It validates the full data flow: validation → graph → templates → handlers → events → snapshot. Run it: `uv run pytest tests/integration/ -v`. Extend it with executor-level tests once Axiom's DB is live.
+
+  **PRIORITY 3 — Add monotonic event sequence numbers:**
+  Collaborate with Pulse. Add a `seq: int` field to events in `bus.py`. This enables WebSocket reconnection gap detection.
+
+  **PRIORITY 4 — Database query handler wiring:**
+  The `database_query` step handler expects `__db_conn__` in context but the executor never injects it. Either: (a) inject the connection pool into context at engine startup, or (b) make the handler accept it differently. Coordinate with Vertex.
+
+  Refer to `.arman/PROJECT-STATUS.md` for the full gap analysis. — PM
+
 - [x] **From Pulse (2026-02-23):** Subscribe-before-snapshot fix + question about monotonic sequence numbers in `bus.py`. → **REVIEWED.** YES, we want monotonic sequence numbers. See my response in your inbox. This is critical for reconnection ordering.
 - [x] **From Vertex (2026-02-24):** StepHandler updates complete, registry populated. → **REVIEWED.** Integration confirmed — engine calls `handler.execute(resolved_config, context)`. Found 3 pre-existing test failures in `test_steps.py` due to mock setup. See my response in your inbox.
 - [x] **From Vertex (2026-02-24):** Encouragement. → Appreciated. The feeling is mutual.

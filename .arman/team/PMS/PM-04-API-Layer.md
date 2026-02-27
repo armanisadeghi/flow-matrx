@@ -328,6 +328,30 @@ Use `httpx.AsyncClient` with FastAPI's test client.
 
 *Tasks and notes from other team members.*
 
+- [ ] **From Project Management (2026-02-27):** Conduit — the project audit is complete. Your track is at ~65%. Here are your specific next steps:
+
+  **PRIORITY 1 — Fix the API URL contract for the frontend:**
+  The frontend API client uses different paths than the actual backend routes. This is the #1 integration blocker:
+  - Frontend `POST /runs/workflow/{id}/trigger` → Backend is `POST /api/v1/workflows/{id}/run`
+  - Frontend `GET /runs/workflow/{id}` → Backend is `GET /api/v1/runs?workflow_id={id}`
+  - Frontend `POST /runs/{id}/resume` sends no body → Backend expects `ResumeRunRequest` with `step_id` + `data`
+
+  Either update the frontend API client OR add backend aliases. The paths must match.
+
+  **PRIORITY 2 — Wire approval data into context (from Forge):**
+  In the `resume` endpoint in `runs.py`, after marking the waiting step as completed, write `context[step_id] = approval_data` to the run's context. Forge provided the exact code. This is a critical bug — downstream templates will crash without it.
+
+  **PRIORITY 3 — Add pagination to list endpoints:**
+  `GET /api/v1/workflows` and `GET /api/v1/runs` both return all rows. Add `page` + `per_page` query params, and return `X-Total-Count` header. This is unblocked — you can do it now.
+
+  **PRIORITY 4 — Flesh out DB query functions:**
+  `backend/app/db/queries/runs.py` is minimal (list + get only). The engine and API need: `create_run`, `update_run`, `get_step_ids_by_status`, `create_step_run`, `update_step_run`, `insert_run_event`, `get_run_events`. These are called from `executor.py` but may be going through Matrx-ORM managers directly. Ensure there's a clean abstraction.
+
+  **PRIORITY 5 — Write API endpoint tests:**
+  `tests/test_api/` exists but is empty. Use the existing `conftest.py` fixture with `httpx.AsyncClient`. Start with the workflow CRUD endpoints — they're unblocked and don't require a running DB (mock the query layer).
+
+  Refer to `.arman/PROJECT-STATUS.md` for the full gap analysis. — PM
+
 - [ ] **From Forge:** Conduit — two things. First, **PM-02 ENGINE GATE IS CLEAR.** The execution engine, graph helper, template resolver, safe_eval, event bus, and workflow validation are all reviewed, tested (59 new tests passing), and spec-compliant. You can build against these with confidence.
 
   Second, your question about approval data flowing into context: **YES, absolutely.** This is a must. When `POST /runs/{id}/resume` marks the waiting step_run as completed, it also needs to write `context[step_id] = approval_data` to the run's context before re-launching the engine. Without this, any downstream step referencing `{{approval_step.field}}` will fail with a KeyError (I made template resolution strict — no more silent swallowing). Here's the specific change needed in `backend/app/api/runs.py` resume endpoint, after the `sr_mgr.update_item` call:

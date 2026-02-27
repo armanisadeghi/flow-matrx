@@ -434,7 +434,51 @@ toast.error("Run failed: connection refused");
 
 *Tasks and notes from other team members.*
 
-*(empty — waiting for PM-05 to be assigned)*
+- [ ] **From Project Management (2026-02-27):** PM-05 — the project audit is complete. **The frontend is at ~20% and is the most behind of all tracks.** There is more scaffolding than implementation here. Here are your specific priorities:
+
+  **PRIORITY 1 — Install shadcn/ui components (D3):**
+  `src/components/ui/` is EMPTY. This is a Non-Negotiable violation (#15). Run:
+  ```
+  cd frontend
+  pnpm dlx shadcn@latest add button badge card input select dialog textarea label separator switch tabs scroll-area dropdown-menu tooltip
+  ```
+  This unblocks everything else — all config panels and pages need these primitives.
+
+  **PRIORITY 2 — Rebuild config panels with React Hook Form + Zod:**
+  Both libraries are installed but used NOWHERE. Every config panel currently uses raw HTML elements and direct state mutation. The pattern should be:
+  1. Define Zod schema (e.g., `httpRequestSchema = z.object({ method: z.enum([...]), url: z.string().url() })`)
+  2. `useForm({ resolver: zodResolver(httpRequestSchema) })`
+  3. Replace raw `<select>` with shadcn `<Select>`, `<input>` with `<Input>`, etc.
+
+  Start with `HttpRequestConfig.tsx` as the template, then replicate across all 12 panels.
+
+  **PRIORITY 3 — Rebuild BaseNode with full status-driven styling:**
+  Current BaseNode is 26 lines with no status awareness. The spec defines 7 status states with specific border colors, backgrounds, and animations. See PM-05 doc D9 for the full status → CSS mapping table.
+
+  **PRIORITY 4 — Rebuild node components with icons and preview content:**
+  All 7 existing node components are 6-line stubs (just pass a color to BaseNode). They need:
+  - Lucide icon matching the catalog (Globe, Brain, Code, etc.)
+  - Preview content (e.g., `{method} {url}` for HTTP, `{provider}: {model}` for LLM)
+  See PM-05 doc D10 for the full icon/preview table.
+
+  **PRIORITY 5 — Add missing node types + config panels:**
+  Missing from node registry: TransformNode, SendEmailNode, WebhookNode, WaitForEventNode, ForEachNode
+  Missing config panels: DelayConfig, TransformConfig, SendEmailConfig, WebhookConfig, WaitForEventConfig, ForEachConfig
+
+  **PRIORITY 6 — Fix API client URL paths:**
+  `src/api/runs.ts` and `src/api/workflows.ts` use paths that don't match the backend routes. The Vite dev proxy handles `/api` → `localhost:8000`, but the paths themselves are wrong:
+  - `workflowsApi.list()` calls `/workflows` → should be `/api/v1/workflows`
+  - `runsApi.trigger()` calls `/runs/workflow/{id}/trigger` → should be `/api/v1/workflows/{id}/run`
+  - Missing TanStack Query hooks: `usePublishWorkflow`, `useValidateWorkflow`, `useDuplicateWorkflow`, `useStartRun`, `useRunEvents`, `useStepRuns`
+
+  **PRIORITY 7 — Mount missing providers:**
+  - `<Toaster />` from sonner (in App.tsx) — unlocks toast notifications
+  - `<ReactQueryDevtools />` behind `import.meta.env.DEV` (in main.tsx)
+
+  **PRIORITY 8 — Write first frontend tests:**
+  Start with pure-function tests: `lib/templates.ts`, `lib/graph-utils.ts`, store tests for `runStore.ts`. These are easy wins toward the 70% coverage target.
+
+  Refer to `.arman/PROJECT-STATUS.md` for the full gap analysis. — PM
 
 - [ ] **From Axiom:** Hey future PM-05 — Axiom here (PM-01). I've been clearing backend gates. Here's what matters to you: the API is now real. All endpoints from the spec exist and return proper data. The WebSocket sends a snapshot on connect with shape `{type: "snapshot", run_id, run_status, context, steps: [{step_id, step_type, status, attempt, error}]}`, then streams live events. Event types are a proper StrEnum — you can rely on the type strings being stable. Seed data script is still pending (that's my next priority) — once it's done you'll have 3 sample workflows to build against. I'll update your inbox when it's ready. — 2026-02-23
 

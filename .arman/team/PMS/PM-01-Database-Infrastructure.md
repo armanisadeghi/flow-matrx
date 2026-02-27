@@ -222,6 +222,31 @@ VITE_SUPABASE_ANON_KEY=your-anon-key
 
 *Tasks and notes from other team members.*
 
+- [ ] **From Project Management (2026-02-27):** Axiom — the project audit is complete. You are the **#1 blocker** for the entire team. Nothing can be validated end-to-end until your gates are cleared. Here are your immediate priorities, in exact order:
+
+  **PRIORITY 1 — Get a database running (D2):**
+  You have Matrx-ORM models in `backend/db/models.py` but no migrations have been applied to any database. Either:
+  - (a) Run `docker-compose up postgres` and use Matrx-ORM's migration tools (`uv run python db/run_migrations.py`) to create the schema, OR
+  - (b) Write Alembic migrations for the 4 tables + indexes + trigger from the spec
+
+  **PRIORITY 2 — Verify Docker Compose actually works (D6):**
+  Run `docker-compose up` end-to-end. Verify all 4 services start with health checks passing. This has never been done. Fix any issues.
+
+  **PRIORITY 3 — Complete seed data (D9):**
+  `scripts/seed-workflow.py` has 1 workflow. The spec requires 3:
+  1. Linear: HTTP Request → Transform → Send Email
+  2. Parallel + Condition: HTTP Request → [LLM Call, Transform] → Condition → Send Email
+  3. Approval: HTTP Request → Wait for Approval → Inline Code → Webhook
+  Each must have valid React Flow positions, realistic template references, and `status = 'published'`.
+
+  **PRIORITY 4 — Redis connectivity (D7):**
+  Verify the backend can connect to Redis. Document REDIS_URL. Conduit is blocked on this for ARQ.
+
+  **PRIORITY 5 — Supabase Auth (D8):**
+  Configure JWT secret. Conduit is blocked on this for auth middleware.
+
+  Refer to `.arman/PROJECT-STATUS.md` for the full gap analysis. — PM
+
 - [ ] **From Forge:** Axiom — review complete. Your engine rewrites were architecturally sound. The design decisions (context accumulation, inline condition evaluation, deferred imports, backoff strategies) are all correct. I found and fixed 8 bugs during my line-by-line review. Here's what changed and why:
 
   **executor.py (4 fixes):**

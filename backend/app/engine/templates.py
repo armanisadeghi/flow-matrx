@@ -6,7 +6,7 @@ from typing import Any
 from jinja2 import Environment, StrictUndefined
 
 _jinja_env = Environment(undefined=StrictUndefined)
-_SINGLE_TEMPLATE = re.compile(r"^\{\{(.+?)\}\}$")
+_SINGLE_TEMPLATE = re.compile(r"^\{\{([^{}]+)\}\}$")
 _HAS_TEMPLATE = re.compile(r"\{\{.+?\}\}")
 
 

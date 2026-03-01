@@ -489,7 +489,7 @@ class TestConditionPipeline:
         resolved = resolve_templates(expression_template, context)
 
         # Evaluate the resolved expression
-        result = safe_eval(str(resolved))
+        result = safe_eval(str(resolved), context)
         assert result is True
 
         pipeline_state["condition_result"] = result

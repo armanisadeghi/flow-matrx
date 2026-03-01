@@ -24,6 +24,7 @@ from app.steps.send_email import SendEmailHandler  # noqa: E402, F401
 from app.steps.webhook import WebhookHandler  # noqa: E402, F401
 from app.steps.delay import DelayHandler  # noqa: E402, F401
 from app.steps.for_each import ForEachHandler  # noqa: E402, F401
+from app.steps.function_call import FunctionCallHandler  # noqa: E402, F401
 
 
 STEP_CATALOG: list[dict[str, Any]] = [
@@ -39,4 +40,5 @@ STEP_CATALOG: list[dict[str, Any]] = [
     {"type": "send_email", "label": "Send Email", "icon": "mail", "category": "integrations", "description": "Send an email to one or more recipients."},
     {"type": "webhook", "label": "Webhook", "icon": "webhook", "category": "integrations", "description": "Send a webhook POST request to an external URL."},
     {"type": "for_each", "label": "For Each", "icon": "repeat", "category": "logic", "description": "Iterate over a list of items, executing a sub-step for each."},
+    {"type": "function_call", "label": "Function Call", "icon": "zap", "category": "custom", "description": "Execute a registered Python function by name."},
 ]

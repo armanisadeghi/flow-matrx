@@ -52,6 +52,7 @@ class RunResponse(BaseModel):
     context: dict[str, Any]
     error: str | None
     idempotency_key: str | None
+    created_by: UUID | None
     started_at: datetime | None
     completed_at: datetime | None
     created_at: datetime

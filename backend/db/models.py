@@ -43,6 +43,7 @@ class Run(Model):
     context = JSONBField(null=False, default={})
     error = TextField(null=True)
     idempotency_key = CharField(null=True, unique=True)
+    created_by = UUIDField(null=True)
     started_at = DateTimeField(null=True)
     completed_at = DateTimeField(null=True)
     created_at = DateTimeField(null=False)

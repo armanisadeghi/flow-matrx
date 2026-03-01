@@ -18,7 +18,7 @@ flow-matrx/
 ├── backend/          Python FastAPI execution engine (uv)
 ├── frontend/         React 19 + Vite SPA (pnpm)
 ├── packages/shared/  Shared TypeScript types
-├── scripts/          Seed data and migration helpers
+├── scripts/          Seed data, migration helpers, schema.sql
 └── docker-compose.yml
 ```
 
@@ -62,31 +62,108 @@ Redux, Axios, styled-components, CSS modules, Moment.js, Lodash (full), Jotai/Re
 
 ### Database (4 tables)
 - **workflows** — DAG definitions (JSONB nodes + edges from React Flow, stored verbatim)
-- **runs** — Execution instances with status, input, accumulated context
+- **runs** — Execution instances with status, input, accumulated context, created_by
 - **step_runs** — Individual step execution records with resolved input and output
 - **run_events** — Append-only event log (source of truth for audit/replay/WebSocket)
 
-### Execution Engine
-The engine loop: build graph -> find ready steps (deps satisfied) -> execute in parallel via `asyncio.gather` -> update context -> broadcast events -> repeat until done/paused/failed. The loop is idempotent — calling it on a partially-completed run picks up where it left off.
+Final SQL schema: `scripts/schema.sql`
+
+### Execution Engine (`backend/app/engine/`)
+
+**Executor** (`executor.py`) — The core loop:
+1. Build graph from workflow definition
+2. Check for cancellation
+3. Find ready steps (all parents completed/skipped)
+4. Execute batch in parallel with semaphore-gated concurrency (`max_concurrency`, default 10)
+5. Process results: merge output to context, handle errors/pauses/skips
+6. Checkpoint context to DB
+7. Repeat until done/paused/failed
+
+**Key capabilities:**
+- **Idempotent resume** — calling `execute_run` on a paused/running run picks up where it left off
+- **Concurrency control** — configurable semaphore prevents resource exhaustion
+- **Run-level timeout** — configurable max duration, auto-fails on expiry
+- **Cancellation propagation** — checks DB for `cancelled` status between batches
+- **Error policies** — per-step `on_error`: `"fail"` (default), `"skip"`, `"continue"`
+- **Retry with backoff** — fixed, linear, or exponential (capped at 5 min)
+- **Condition branching** — evaluates expression, skips losing branch's exclusive subtree
+- **for_each loops** — iterates items with optional sub-handler, supports parallel iteration
+- **Pause/resume** — both `wait_for_approval` and `wait_for_event` pause the run
+
+**Graph** (`graph.py`) — DAG analysis:
+- Topological sort (Kahn's algorithm) with cycle detection
+- Execution levels (parallelism tiers for scheduling)
+- Exclusive branch analysis (handles diamond merges correctly)
+- Subgraph extraction, critical path analysis
+- Node accessors: type, label, config, nodes-by-type
+
+**Templates** (`templates.py`) — `{{step_id.field}}` resolution via Jinja2 + deep_get.
+
+**Safe eval** (`safe_eval.py`) — AST-restricted expression evaluation for conditions.
+
+**Function registry** (`function_registry.py`) — Plugin system for user-defined functions.
 
 ### Communication Protocol
-- **Event Bus** — In-process pub/sub. Engine emits events at every state transition.
+- **Event Bus** (`events/bus.py`) — In-process pub/sub with injectable persistence backend.
 - **WebSocket** `/ws/runs/{id}` — Sends snapshot on connect, then streams live events.
-- **Event types:** run.started, run.completed, run.failed, run.paused, run.resumed, run.cancelled, step.started, step.completed, step.failed, step.skipped, step.waiting, step.retrying, context.updated
+- **Event types (13):** run.started, run.completed, run.failed, run.paused, run.resumed, run.cancelled, step.started, step.completed, step.failed, step.skipped, step.waiting, step.retrying, context.updated
 - Events are facts. The UI renders facts. NO polling. NO inference.
 
 ### Step Handler Plugin System
 - Base class: `StepHandler` with `execute(config, context) -> dict`
 - Handlers are pure functions — no DB writes, no event emission, no run awareness
 - Registry: `STEP_REGISTRY = {"type_name": HandlerInstance()}`
-- Types: http_request, llm_call, inline_code, condition, database_query, transform, delay, wait_for_approval, send_email, webhook, wait_for_event, for_each
-- Adding a step = 5 files: Python handler, registry entry, React node, React config panel, frontend registry entries
+- **Built-in types (13):** http_request, llm_call, inline_code, condition, database_query, transform, delay, wait_for_approval, wait_for_event, send_email, webhook, for_each, function_call
+- **Engine-handled types** (bypass generic handler path): condition, wait_for_approval, wait_for_event, for_each
+- Adding a built-in step = 5 files: Python handler, registry entry, React node, React config panel, frontend registry entries
+
+### Function Registry (Registered Functions)
+- Register async Python callables by import path or `@register_function` decorator
+- Functions receive `(config, context)` and return a `dict`
+- `config` = the node's resolved config merged with `args` (spread, no schema enforcement)
+- `context` = the full run context (all upstream step outputs + `input`)
+- Functions do NOT have access to the event bus or DB — they are pure
+- Registry supports metadata (description, input_schema, output_schema) for frontend catalog
+- Functions invoked via the `function_call` step type in the workflow graph
 
 ### Data Flow Between Steps
 - All data passes through `runs.context` (shared scratchpad)
-- Steps reference upstream data via `{{context.step_id.field}}` templates
+- Steps reference upstream data via `{{step_id.field}}` templates
 - No "data wires" or connection-level mapping in the UI
 - `step_runs.input` stores RESOLVED config (templates filled in) for debugging
+
+---
+
+## Node Data Shape
+
+Every node in the workflow definition JSONB follows this shape:
+
+```json
+{
+  "id": "step_1",
+  "type": "http_request",
+  "position": {"x": 100, "y": 200},
+  "data": {
+    "label": "Fetch Users",
+    "config": { "url": "...", "method": "GET" },
+    "on_error": "fail",
+    "max_attempts": 1,
+    "backoff_strategy": "fixed",
+    "backoff_base": 2.0,
+    "timeout_seconds": null
+  }
+}
+```
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `data.label` | string | node id | Display name |
+| `data.config` | object | `{}` | Handler-specific configuration (templates resolved at runtime) |
+| `data.on_error` | `"fail"` \| `"skip"` \| `"continue"` | `"fail"` | What to do when the step fails |
+| `data.max_attempts` | int | 1 | Number of retry attempts |
+| `data.backoff_strategy` | `"fixed"` \| `"linear"` \| `"exponential"` | `"fixed"` | Backoff between retries |
+| `data.backoff_base` | float | 2.0 | Base delay in seconds for backoff |
+| `data.timeout_seconds` | float \| null | null | Per-step timeout (null = no limit) |
 
 ---
 
@@ -135,6 +212,7 @@ The engine loop: build graph -> find ready steps (deps satisfied) -> execute in 
 ### Other
 - `WS /ws/runs/{id}` — Live event stream
 - `GET /api/v1/catalog/steps` — Step type metadata for palette
+- `GET /api/v1/catalog/functions` — Registered function metadata (TODO)
 
 All resource-creating endpoints MUST support `X-Idempotency-Key` header.
 
@@ -160,7 +238,8 @@ pnpm build                  # Production build
 pnpm test                   # Vitest
 pnpm biome check --write src  # Lint + format
 
-# Seed data
+# Database
+psql -f scripts/schema.sql  # Create tables from final schema
 make seed                   # Insert sample workflows
 ```
 
@@ -168,10 +247,28 @@ make seed                   # Insert sample workflows
 
 ## Phase Plan
 
-1. **Phase 1 (Foundation):** Engine executes linear workflow with 3 step types + WebSocket streaming
+1. **Phase 1 (Foundation):** Engine executes linear workflow with 3 step types + WebSocket streaming — **COMPLETE**
 2. **Phase 2 (Builder):** Visual canvas with drag-drop, config panels, save/load/publish
 3. **Phase 3 (Live Execution):** Real-time run visualization, approval flow, run history
 4. **Phase 4 (Polish):** Versioning, scheduled/webhook triggers, auto-layout, full tests, production deploy
+
+---
+
+## Test Suite (132 tests passing)
+
+```bash
+# Run all tests (from backend/)
+PYTHONPATH=. python3 -m pytest tests/ --noconftest -p tests.test_engine.conftest -v
+
+# By category:
+tests/test_graph.py              # Graph traversal, ready steps, branches
+tests/test_templates.py          # Template resolution, type preservation
+tests/test_safe_eval.py          # AST-safe expression evaluation
+tests/test_validation.py         # Workflow validation (cycles, orphans, refs)
+tests/test_steps.py              # Step handler unit tests
+tests/test_engine/               # Engine executor, graph enhancements, function registry
+tests/integration/               # Full pipeline integration tests
+```
 
 ---
 

@@ -20,24 +20,18 @@ Create a blank hand-written migration:
 
 import asyncio
 import sys
-from dotenv import load_dotenv
 
-load_dotenv()
+from matrx_orm import create_empty, makemigrations, migrate, migration_status, rollback
 
-from matrx_orm import register_database_from_env, makemigrations, migrate, rollback, migration_status, create_empty
-
-register_database_from_env(
-    name="flow_matrx",
-    env_prefix="DB",
-    additional_schemas=[],
-)
+import db.models  # noqa: F401 — triggers db/__init__.py (register_database_from_env) + model_registry.register_all
 
 DATABASE = "flow_matrx"
 MIGRATIONS_DIR = "migrations"
+MANAGED_TABLES = {"wf_workflows", "wf_runs", "wf_step_runs", "wf_run_events"}
 
 
 async def make(name: str | None = None) -> None:
-    await makemigrations(DATABASE, MIGRATIONS_DIR, name=name)
+    await makemigrations(DATABASE, MIGRATIONS_DIR, name=name, include_tables=MANAGED_TABLES)
 
 
 async def apply() -> None:

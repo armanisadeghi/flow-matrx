@@ -7,7 +7,7 @@ output:
   # Paths are machine-specific — set them in your local .env, not here.
   # Required:  MATRX_PYTHON_ROOT=/absolute/path/to/flow-matrx/backend
   # Optional:  MATRX_SAVE_DIRECT=true
-  save_direct: false
+  save_direct: true
   python: true
   typescript: false
   json: true
@@ -17,8 +17,7 @@ output:
 # =============================================================================
 databases:
   - name: flow_matrx
-    env_prefix: DB
-    additional_schemas: []
+    env_prefix: FLOW_MATRX_DB
 
 # =============================================================================
 # Schema generation
@@ -27,8 +26,8 @@ generate:
   - database: flow_matrx
     schema: public
     manager_flags:
-      include_core_relations: true
-      include_filter_fields: true
+      include_core_relations: true      # FK/IFK fetch methods
+      include_filter_fields: true       # filter_by_* methods
       include_active_relations: false
       include_active_methods: false
       include_or_not_methods: false

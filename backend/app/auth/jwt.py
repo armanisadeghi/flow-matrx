@@ -11,13 +11,13 @@ from app.config import settings
 
 async def verify_token(token: str) -> dict[str, Any]:
     """Verify a Supabase JWT and return the decoded claims."""
-    if not settings.supabase_url or not settings.supabase_jwt_secret:
+    if not settings.supabase.configured:
         # Local dev: skip auth
         return {"sub": "dev-user", "role": "authenticated"}
 
     async with httpx.AsyncClient() as client:
         response = await client.get(
-            f"{settings.supabase_url}/auth/v1/user",
+            f"{settings.supabase.url}/auth/v1/user",
             headers={"Authorization": f"Bearer {token}"},
         )
         if response.status_code != 200:

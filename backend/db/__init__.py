@@ -1,11 +1,8 @@
-from dotenv import load_dotenv
-
-load_dotenv()
-
-from matrx_orm import register_database_from_env
-
-register_database_from_env(
-    name="flow_matrx",
-    env_prefix="DB",
-    additional_schemas=[],
-)
+# from matrx_orm import register_database_from_env
+# from app.config import settings
+#
+# register_database_from_env(
+#     name="flow_matrx",
+#     env_prefix="FLOW_MATRX_DB",
+#     additional_schemas=[],
+# )

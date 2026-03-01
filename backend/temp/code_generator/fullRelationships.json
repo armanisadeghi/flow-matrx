@@ -1,0 +1,457 @@
+{
+    "org": {
+        "selfReferential": [],
+        "manyToMany": [],
+        "oneToOne": [],
+        "manyToOne": [],
+        "oneToMany": [],
+        "undefined": [],
+        "inverseReferences": [
+            "orgMember",
+            "wfWorkflow",
+            "wfRun",
+            "wfStepRun",
+            "wfRunEvent",
+            "resourceShare"
+        ],
+        "relationshipDetails": {
+            "entityName": "org",
+            "table_name": "org",
+            "foreignKeys": {},
+            "referencedBy": {
+                "orgMember": {
+                    "foreign_table": "org_member",
+                    "foreign_entity": "orgMember",
+                    "field": "orgId",
+                    "column": "org_id",
+                    "foreign_field": "id",
+                    "foreign_column": "id",
+                    "constraint_name": "org_member_org_id_fkey"
+                },
+                "wfWorkflow": {
+                    "foreign_table": "wf_workflow",
+                    "foreign_entity": "wfWorkflow",
+                    "field": "orgId",
+                    "column": "org_id",
+                    "foreign_field": "id",
+                    "foreign_column": "id",
+                    "constraint_name": "wf_workflow_org_id_fkey"
+                },
+                "wfRun": {
+                    "foreign_table": "wf_run",
+                    "foreign_entity": "wfRun",
+                    "field": "orgId",
+                    "column": "org_id",
+                    "foreign_field": "id",
+                    "foreign_column": "id",
+                    "constraint_name": "wf_run_org_id_fkey"
+                },
+                "wfStepRun": {
+                    "foreign_table": "wf_step_run",
+                    "foreign_entity": "wfStepRun",
+                    "field": "orgId",
+                    "column": "org_id",
+                    "foreign_field": "id",
+                    "foreign_column": "id",
+                    "constraint_name": "wf_step_run_org_id_fkey"
+                },
+                "wfRunEvent": {
+                    "foreign_table": "wf_run_event",
+                    "foreign_entity": "wfRunEvent",
+                    "field": "orgId",
+                    "column": "org_id",
+                    "foreign_field": "id",
+                    "foreign_column": "id",
+                    "constraint_name": "wf_run_event_org_id_fkey"
+                },
+                "resourceShare": {
+                    "foreign_table": "resource_share",
+                    "foreign_entity": "resourceShare",
+                    "field": "sharedWithOrgId",
+                    "column": "shared_with_org_id",
+                    "foreign_field": "id",
+                    "foreign_column": "id",
+                    "constraint_name": "resource_share_shared_with_org_id_fkey"
+                }
+            }
+        }
+    },
+    "userProfile": {
+        "selfReferential": [],
+        "manyToMany": [],
+        "oneToOne": [],
+        "manyToOne": [],
+        "oneToMany": [],
+        "undefined": [],
+        "inverseReferences": [
+            "orgMember",
+            "wfWorkflow",
+            "wfRun",
+            "wfStepRun",
+            "wfRunEvent",
+            "resourceShare"
+        ],
+        "relationshipDetails": {
+            "entityName": "userProfile",
+            "table_name": "user_profile",
+            "foreignKeys": {},
+            "referencedBy": {
+                "orgMember": {
+                    "foreign_table": "org_member",
+                    "foreign_entity": "orgMember",
+                    "field": "userId",
+                    "column": "user_id",
+                    "foreign_field": "id",
+                    "foreign_column": "id",
+                    "constraint_name": "org_member_user_id_fkey"
+                },
+                "wfWorkflow": {
+                    "foreign_table": "wf_workflow",
+                    "foreign_entity": "wfWorkflow",
+                    "field": "userId",
+                    "column": "user_id",
+                    "foreign_field": "id",
+                    "foreign_column": "id",
+                    "constraint_name": "wf_workflow_user_id_fkey"
+                },
+                "wfRun": {
+                    "foreign_table": "wf_run",
+                    "foreign_entity": "wfRun",
+                    "field": "userId",
+                    "column": "user_id",
+                    "foreign_field": "id",
+                    "foreign_column": "id",
+                    "constraint_name": "wf_run_user_id_fkey"
+                },
+                "wfStepRun": {
+                    "foreign_table": "wf_step_run",
+                    "foreign_entity": "wfStepRun",
+                    "field": "userId",
+                    "column": "user_id",
+                    "foreign_field": "id",
+                    "foreign_column": "id",
+                    "constraint_name": "wf_step_run_user_id_fkey"
+                },
+                "wfRunEvent": {
+                    "foreign_table": "wf_run_event",
+                    "foreign_entity": "wfRunEvent",
+                    "field": "userId",
+                    "column": "user_id",
+                    "foreign_field": "id",
+                    "foreign_column": "id",
+                    "constraint_name": "wf_run_event_user_id_fkey"
+                },
+                "resourceShare": {
+                    "foreign_table": "resource_share",
+                    "foreign_entity": "resourceShare",
+                    "field": "createdBy",
+                    "column": "created_by",
+                    "foreign_field": "id",
+                    "foreign_column": "id",
+                    "constraint_name": "resource_share_created_by_fkey"
+                }
+            }
+        }
+    },
+    "orgMember": {
+        "selfReferential": [],
+        "manyToMany": [
+            "org",
+            "userProfile"
+        ],
+        "oneToOne": [],
+        "manyToOne": [],
+        "oneToMany": [],
+        "undefined": [],
+        "inverseReferences": [],
+        "relationshipDetails": {
+            "entityName": "orgMember",
+            "table_name": "org_member",
+            "foreignKeys": {
+                "org": {
+                    "foreign_table": "org",
+                    "foreign_entity": "org",
+                    "column": "org_id",
+                    "fieldName": "orgId",
+                    "foreign_field": "id",
+                    "foreign_column": "id",
+                    "relationship_type": "many-to-many",
+                    "constraint_name": "org_member_org_id_fkey"
+                },
+                "userProfile": {
+                    "foreign_table": "user_profile",
+                    "foreign_entity": "userProfile",
+                    "column": "user_id",
+                    "fieldName": "userId",
+                    "foreign_field": "id",
+                    "foreign_column": "id",
+                    "relationship_type": "many-to-many",
+                    "constraint_name": "org_member_user_id_fkey"
+                }
+            },
+            "referencedBy": {}
+        }
+    },
+    "wfWorkflow": {
+        "selfReferential": [],
+        "manyToMany": [
+            "org",
+            "userProfile"
+        ],
+        "oneToOne": [],
+        "manyToOne": [],
+        "oneToMany": [],
+        "undefined": [],
+        "inverseReferences": [
+            "wfRun"
+        ],
+        "relationshipDetails": {
+            "entityName": "wfWorkflow",
+            "table_name": "wf_workflow",
+            "foreignKeys": {
+                "org": {
+                    "foreign_table": "org",
+                    "foreign_entity": "org",
+                    "column": "org_id",
+                    "fieldName": "orgId",
+                    "foreign_field": "id",
+                    "foreign_column": "id",
+                    "relationship_type": "many-to-many",
+                    "constraint_name": "wf_workflow_org_id_fkey"
+                },
+                "userProfile": {
+                    "foreign_table": "user_profile",
+                    "foreign_entity": "userProfile",
+                    "column": "user_id",
+                    "fieldName": "userId",
+                    "foreign_field": "id",
+                    "foreign_column": "id",
+                    "relationship_type": "many-to-many",
+                    "constraint_name": "wf_workflow_user_id_fkey"
+                }
+            },
+            "referencedBy": {
+                "wfRun": {
+                    "foreign_table": "wf_run",
+                    "foreign_entity": "wfRun",
+                    "field": "workflowId",
+                    "column": "workflow_id",
+                    "foreign_field": "id",
+                    "foreign_column": "id",
+                    "constraint_name": "wf_run_workflow_id_fkey"
+                }
+            }
+        }
+    },
+    "wfRun": {
+        "selfReferential": [],
+        "manyToMany": [
+            "org",
+            "userProfile",
+            "wfWorkflow"
+        ],
+        "oneToOne": [],
+        "manyToOne": [],
+        "oneToMany": [],
+        "undefined": [],
+        "inverseReferences": [
+            "wfStepRun",
+            "wfRunEvent"
+        ],
+        "relationshipDetails": {
+            "entityName": "wfRun",
+            "table_name": "wf_run",
+            "foreignKeys": {
+                "org": {
+                    "foreign_table": "org",
+                    "foreign_entity": "org",
+                    "column": "org_id",
+                    "fieldName": "orgId",
+                    "foreign_field": "id",
+                    "foreign_column": "id",
+                    "relationship_type": "many-to-many",
+                    "constraint_name": "wf_run_org_id_fkey"
+                },
+                "userProfile": {
+                    "foreign_table": "user_profile",
+                    "foreign_entity": "userProfile",
+                    "column": "user_id",
+                    "fieldName": "userId",
+                    "foreign_field": "id",
+                    "foreign_column": "id",
+                    "relationship_type": "many-to-many",
+                    "constraint_name": "wf_run_user_id_fkey"
+                },
+                "wfWorkflow": {
+                    "foreign_table": "wf_workflow",
+                    "foreign_entity": "wfWorkflow",
+                    "column": "workflow_id",
+                    "fieldName": "workflowId",
+                    "foreign_field": "id",
+                    "foreign_column": "id",
+                    "relationship_type": "many-to-many",
+                    "constraint_name": "wf_run_workflow_id_fkey"
+                }
+            },
+            "referencedBy": {
+                "wfStepRun": {
+                    "foreign_table": "wf_step_run",
+                    "foreign_entity": "wfStepRun",
+                    "field": "runId",
+                    "column": "run_id",
+                    "foreign_field": "id",
+                    "foreign_column": "id",
+                    "constraint_name": "wf_step_run_run_id_fkey"
+                },
+                "wfRunEvent": {
+                    "foreign_table": "wf_run_event",
+                    "foreign_entity": "wfRunEvent",
+                    "field": "runId",
+                    "column": "run_id",
+                    "foreign_field": "id",
+                    "foreign_column": "id",
+                    "constraint_name": "wf_run_event_run_id_fkey"
+                }
+            }
+        }
+    },
+    "wfStepRun": {
+        "selfReferential": [],
+        "manyToMany": [
+            "org",
+            "userProfile",
+            "wfRun"
+        ],
+        "oneToOne": [],
+        "manyToOne": [],
+        "oneToMany": [],
+        "undefined": [],
+        "inverseReferences": [],
+        "relationshipDetails": {
+            "entityName": "wfStepRun",
+            "table_name": "wf_step_run",
+            "foreignKeys": {
+                "org": {
+                    "foreign_table": "org",
+                    "foreign_entity": "org",
+                    "column": "org_id",
+                    "fieldName": "orgId",
+                    "foreign_field": "id",
+                    "foreign_column": "id",
+                    "relationship_type": "many-to-many",
+                    "constraint_name": "wf_step_run_org_id_fkey"
+                },
+                "userProfile": {
+                    "foreign_table": "user_profile",
+                    "foreign_entity": "userProfile",
+                    "column": "user_id",
+                    "fieldName": "userId",
+                    "foreign_field": "id",
+                    "foreign_column": "id",
+                    "relationship_type": "many-to-many",
+                    "constraint_name": "wf_step_run_user_id_fkey"
+                },
+                "wfRun": {
+                    "foreign_table": "wf_run",
+                    "foreign_entity": "wfRun",
+                    "column": "run_id",
+                    "fieldName": "runId",
+                    "foreign_field": "id",
+                    "foreign_column": "id",
+                    "relationship_type": "many-to-many",
+                    "constraint_name": "wf_step_run_run_id_fkey"
+                }
+            },
+            "referencedBy": {}
+        }
+    },
+    "wfRunEvent": {
+        "selfReferential": [],
+        "manyToMany": [
+            "org",
+            "userProfile",
+            "wfRun"
+        ],
+        "oneToOne": [],
+        "manyToOne": [],
+        "oneToMany": [],
+        "undefined": [],
+        "inverseReferences": [],
+        "relationshipDetails": {
+            "entityName": "wfRunEvent",
+            "table_name": "wf_run_event",
+            "foreignKeys": {
+                "org": {
+                    "foreign_table": "org",
+                    "foreign_entity": "org",
+                    "column": "org_id",
+                    "fieldName": "orgId",
+                    "foreign_field": "id",
+                    "foreign_column": "id",
+                    "relationship_type": "many-to-many",
+                    "constraint_name": "wf_run_event_org_id_fkey"
+                },
+                "userProfile": {
+                    "foreign_table": "user_profile",
+                    "foreign_entity": "userProfile",
+                    "column": "user_id",
+                    "fieldName": "userId",
+                    "foreign_field": "id",
+                    "foreign_column": "id",
+                    "relationship_type": "many-to-many",
+                    "constraint_name": "wf_run_event_user_id_fkey"
+                },
+                "wfRun": {
+                    "foreign_table": "wf_run",
+                    "foreign_entity": "wfRun",
+                    "column": "run_id",
+                    "fieldName": "runId",
+                    "foreign_field": "id",
+                    "foreign_column": "id",
+                    "relationship_type": "many-to-many",
+                    "constraint_name": "wf_run_event_run_id_fkey"
+                }
+            },
+            "referencedBy": {}
+        }
+    },
+    "resourceShare": {
+        "selfReferential": [],
+        "manyToMany": [
+            "org",
+            "userProfile"
+        ],
+        "oneToOne": [],
+        "manyToOne": [],
+        "oneToMany": [],
+        "undefined": [],
+        "inverseReferences": [],
+        "relationshipDetails": {
+            "entityName": "resourceShare",
+            "table_name": "resource_share",
+            "foreignKeys": {
+                "org": {
+                    "foreign_table": "org",
+                    "foreign_entity": "org",
+                    "column": "shared_with_org_id",
+                    "fieldName": "sharedWithOrgId",
+                    "foreign_field": "id",
+                    "foreign_column": "id",
+                    "relationship_type": "many-to-many",
+                    "constraint_name": "resource_share_shared_with_org_id_fkey"
+                },
+                "userProfile": {
+                    "foreign_table": "user_profile",
+                    "foreign_entity": "userProfile",
+                    "column": "created_by",
+                    "fieldName": "createdBy",
+                    "foreign_field": "id",
+                    "foreign_column": "id",
+                    "relationship_type": "many-to-many",
+                    "constraint_name": "resource_share_created_by_fkey"
+                }
+            },
+            "referencedBy": {}
+        }
+    }
+}

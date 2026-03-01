@@ -8,13 +8,12 @@ from app.config import settings
 from app.steps.base import StepHandler
 from app.steps.registry import register_step
 
-
 # From Arman: This is only a placeholder. No need to make updates, since it will be reaplced with our real implementation.
 
 @register_step
 class LLMCallHandler(StepHandler):
     step_type = "llm_call"
-    metadata = {
+    metadata = {  # noqa: RUF012
         "label": "LLM Call",
         "description": "Call a large language model and return the generated text.",
         "config_schema": {
@@ -41,7 +40,7 @@ class LLMCallHandler(StepHandler):
         async with httpx.AsyncClient() as client:
             response = await client.post(
                 "https://api.openai.com/v1/chat/completions",
-                headers={"Authorization": f"Bearer {settings.openai_api_key}"},
+                headers={"Authorization": f"Bearer {settings.llm.openai_api_key.get_secret_value()}"},
                 json={"model": model, "messages": messages, "temperature": temperature},
                 timeout=120.0,
             )

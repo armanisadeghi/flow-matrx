@@ -1,0 +1,87 @@
+{
+    "last_updated": "2026-03-01 12:56:04",
+    "table_count": 8,
+    "view_count": 0,
+    "tables_with_primary_key": 8,
+    "tables_without_primary_key": 0,
+    "no_primary_key_tables": [],
+    "total_columns": 86,
+    "unique_column_types": [
+        "text",
+        "jsonb",
+        "int4",
+        "uuid",
+        "timestamptz"
+    ],
+    "most_common_column_types": {
+        "uuid": 26,
+        "timestamptz": 26,
+        "text": 23,
+        "jsonb": 9,
+        "int4": 2
+    },
+    "all_enum_base_types": [],
+    "tables_by_size": [
+        "org",
+        "org_member",
+        "resource_share",
+        "user_profile",
+        "wf_run"
+    ],
+    "views_by_size": [],
+    "fetch_strategies": {
+        "simple": 8
+    },
+    "tables_with_foreign_keys": 6,
+    "tables_with_inverse_foreign_keys": 4,
+    "tables_with_many_to_many": 4,
+    "default_component_count": {
+        "UUID_FIELD": 14,
+        "TEXTAREA": 23,
+        "JSON_EDITOR": 9,
+        "DATE_PICKER": 26,
+        "FK_SELECT": 12,
+        "NUMBER_INPUT": 2
+    },
+    "calc_validation_functions_count": {
+        "[]": 86
+    },
+    "calc_exclusion_rules_count": {
+        "[]": 86
+    },
+    "sub_component_props_count": {},
+    "estimated_row_counts": {
+        "org": -1,
+        "org_member": -1,
+        "resource_share": -1,
+        "user_profile": -1,
+        "wf_run": -1,
+        "wf_run_event": -1,
+        "wf_step_run": -1,
+        "wf_workflow": -1
+    },
+    "foreign_key_relationships_total": 15,
+    "referenced_by_relationships_total": 15,
+    "many_to_many_relationships_total": 8,
+    "database_table_names": [
+        "org",
+        "org_member",
+        "resource_share",
+        "user_profile",
+        "wf_run",
+        "wf_run_event",
+        "wf_step_run",
+        "wf_workflow"
+    ],
+    "database_view_names": [],
+    "allEntities": [
+        "org",
+        "orgMember",
+        "resourceShare",
+        "userProfile",
+        "wfRun",
+        "wfRunEvent",
+        "wfStepRun",
+        "wfWorkflow"
+    ]
+}

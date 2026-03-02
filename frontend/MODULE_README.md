@@ -15,7 +15,7 @@ are overwritten each time the generator runs. Everything else is yours to edit f
 | Field | Value |
 |-------|-------|
 | Module | `frontend` |
-| Last generated | 2026-03-01 09:12 |
+| Last generated | 2026-03-01 15:46 |
 | Output file | `frontend/MODULE_README.md` |
 | Signature mode | `signatures` |
 
@@ -52,7 +52,7 @@ python utils/code_context/generate_module_readme.py frontend --mode signatures
 <!-- AUTO:tree -->
 ## Directory Tree
 
-> Auto-generated. 51 files across 13 directories.
+> Auto-generated. 52 files across 14 directories.
 
 ```
 frontend/
@@ -120,6 +120,8 @@ frontend/
 │   │   ├── workflowStore.ts
 │   ├── types/
 │   │   ├── index.ts
+│   ├── utils/
+│   │   ├── supabase.ts
 ├── vite.config.ts
 # excluded: 5 .json, 2 .yaml, 1 .md, 1 .css, 1 .svg
 ```
@@ -190,6 +192,11 @@ Filepath: frontend/src/api/client.ts  [typescript]
 
 ---
 Filepath: frontend/src/types/index.ts  [typescript]
+
+
+
+---
+Filepath: frontend/src/utils/supabase.ts  [typescript]
 
 
 

@@ -128,9 +128,6 @@ ai-matrx-workflow/
 ├── backend/
 │   ├── pyproject.toml               # Python project config (managed with uv)
 │   ├── uv.lock                      # uv lockfile (committed to git)
-│   ├── alembic.ini                  # Database migrations
-│   ├── alembic/
-│   │   └── versions/                # Migration files
 │   │
 │   ├── app/
 │   │   ├── __init__.py
@@ -333,7 +330,6 @@ These are the exact versions to install. Do not use older versions. Do not subst
 | pydantic-settings | 2.13.x | Environment config |
 | httpx | 0.28.x | Async HTTP client (for step handlers) |
 | structlog | 24.4.x | Structured logging |
-| alembic | 1.18.x | Database migrations |
 | arq | 0.27.x | Background task queue (Redis-backed) |
 | jinja2 | 3.1.x | Template resolution in step configs |
 | orjson | 3.11.x | Fast JSON serialization |
@@ -422,7 +418,6 @@ The project requires three specialist tracks executing in parallel after the sha
 **Deliverables (in order):**
 
 1. Set up the Supabase project and configure the Postgres instance.
-2. Write and run ALL migrations defined in Section 5 using Alembic.
 3. Create `docker-compose.yml` for local dev (Postgres, Redis, backend, frontend).
 4. Set up Redis instance for background task queue.
 5. Configure Supabase Auth with JWT verification for the API.
@@ -652,17 +647,15 @@ CREATE TRIGGER trg_workflows_updated_at
 
 ### Important Schema Notes
 
-1. **Matrx-ORM Model Definitions:** The SQL schema above is the source of truth. Matrx-ORM model classes in `db/models/` MUST mirror this schema exactly. Use Matrx-ORM's reverse migration tooling to generate models from the live schema, then verify. The engine uses Matrx-ORM for all CRUD operations — raw SQL is only acceptable in Alembic migration files and complex aggregate queries that the ORM cannot express.
+1. **Matrx-ORM Model Definitions:** The SQL schema above is the source of truth. Matrx-ORM model classes in `db/models/` MUST mirror this schema exactly. Use Matrx-ORM's reverse migration tooling to generate models from the live schema, then verify. The engine uses Matrx-ORM for all CRUD operations
 
-2. **Migration Workflow:** Alembic handles DDL schema migrations (CREATE TABLE, ALTER, indexes). Matrx-ORM handles runtime data access (queries, inserts, updates). These are complementary, not competing. When you change the schema: (a) write an Alembic migration, (b) apply it, (c) run Matrx-ORM's reverse migration to regenerate model classes, (d) verify they match.
+2. **`runs.context`** is the shared scratchpad. It is the ONLY mechanism for passing data between steps. There are no "data wires" or "connectors" in the UI. Steps declare what context keys they read/write via `{{template}}` strings.
 
-3. **`runs.context`** is the shared scratchpad. It is the ONLY mechanism for passing data between steps. There are no "data wires" or "connectors" in the UI. Steps declare what context keys they read/write via `{{template}}` strings.
+3. **`run_events`** is an append-only log. The engine writes to it. The WebSocket reads from it. The frontend consumes it. This table is the **single source of truth for what happened during a run.** It enables replay, audit, and resumability.
 
-4. **`run_events`** is an append-only log. The engine writes to it. The WebSocket reads from it. The frontend consumes it. This table is the **single source of truth for what happened during a run.** It enables replay, audit, and resumability.
+4. **`step_runs.input`** stores the RESOLVED config (templates already filled in). This is critical for debugging — you can see exactly what a step received, not just the template.
 
-5. **`step_runs.input`** stores the RESOLVED config (templates already filled in). This is critical for debugging — you can see exactly what a step received, not just the template.
-
-6. **Workflow versioning:** When a user publishes a workflow, the current draft row gets `status = 'published'`. To edit it, the frontend creates a new row with `version + 1` and `status = 'draft'`. Runs always reference a specific workflow row (which is immutable once published). This means you can always reproduce a run exactly.
+5. **Workflow versioning:** When a user publishes a workflow, the current draft row gets `status = 'published'`. To edit it, the frontend creates a new row with `version + 1` and `status = 'draft'`. Runs always reference a specific workflow row (which is immutable once published). This means you can always reproduce a run exactly.
 
 ---
 

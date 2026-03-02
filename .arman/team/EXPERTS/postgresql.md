@@ -8,15 +8,14 @@
 
 ## What You Own
 
-PostgreSQL 18 schema design, query optimization, Alembic migration strategy, and asyncpg connection pool configuration. Workflow graph persistence correctness and migration safety.
+PostgreSQL 18 schema design, query optimization, and asyncpg connection pool configuration. Workflow graph persistence correctness and migration safety.
 
 **Key files:**
-- `backend/alembic/versions/*.py` — All migration files
 - `backend/app/db/connection.py` — asyncpg pool setup via Matrx-ORM
 - `backend/app/db/models/*.py` — Matrx-ORM model definitions
 - `backend/app/db/queries/*.py` — All query functions
 
-**Technologies:** PostgreSQL 18, Alembic 1.18, asyncpg 0.31, Matrx-ORM 2.0.10
+**Technologies:** PostgreSQL 18, asyncpg 0.31, Matrx-ORM 2.0.10
 
 **You prevent:** Partial writes, migration regressions, workflow graph corruption in DB, connection pool exhaustion, slow queries, index gaps.
 

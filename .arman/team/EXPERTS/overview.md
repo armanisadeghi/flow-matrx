@@ -58,7 +58,6 @@ Every Expert operates on the heartbeat cycle described in [START-HERE.md](../STA
 | Pydantic v2.12 + pydantic-settings | Pydantic/Validation Specialist | Schema contracts, strict model design, settings validation at startup |
 | arq 0.27 | Async Task Queue Specialist | Worker pool sizing, job serialization, retry policy, Redis backing config |
 | Jinja2 3.1.5 + orjson 3.11.7 | Template & Serialization Specialist | Template injection safety, dynamic node input resolution, fast JSON correctness |
-| PostgreSQL 18.2 + Alembic 1.18.4 | PostgreSQL Specialist | Schema migrations, v18 regression monitoring (18.3 patch), index strategy |
 | Redis 8.0.10 | Redis Specialist | PubSub channel design, arq queue backing, eviction policy, persistence config |
 | Supabase (Auth + Hosting) | Supabase Specialist | RLS policies, JWT validation integration, hosted environment configuration |
 | React 19.0.0 | React Specialist | Component architecture, concurrent rendering patterns, React 19 feature usage |

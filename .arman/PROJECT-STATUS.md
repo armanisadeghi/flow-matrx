@@ -21,7 +21,6 @@ The project has strong foundational architecture but is currently **~35% complet
 | Deliverable | Status | Notes |
 |-------------|--------|-------|
 | D1: Supabase Project Setup | NOT STARTED | No live DB instance provisioned |
-| D2: Migration 001 (Core Tables) | NOT STARTED | Matrx-ORM models exist in `db/models.py` (175 lines, all 4 tables), but no Alembic migrations written or run |
 | D3: Migration 002 (Indexes) | NOT STARTED | No index migration |
 | D4: Migration 003 (updated_at Trigger) | NOT STARTED | No trigger migration |
 | D5: Matrx-ORM Model Generation | DONE | Models in `backend/db/models.py` match spec |
@@ -197,7 +196,6 @@ No one has ever:
 
 ### P0 — Unblock Everything (PM-01 / Axiom)
 1. Get Postgres running (Docker Compose or Supabase)
-2. Apply schema migrations (write Alembic migrations OR use Matrx-ORM migration tools)
 3. Verify all 4 tables + indexes + trigger exist
 4. Complete seed data script (3 workflows per spec)
 5. Verify `docker-compose up` brings up all services with health checks

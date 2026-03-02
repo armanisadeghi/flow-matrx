@@ -31,7 +31,6 @@ Own the data layer and infrastructure foundation that everything else depends on
 - Document in .env.example
 
 ### D2: Database Schema — Migration 001 (Core Tables)
-Write and apply the Alembic migration for all 4 tables:
 
 **workflows**
 - `id UUID PRIMARY KEY DEFAULT gen_random_uuid()`
@@ -188,7 +187,6 @@ VITE_SUPABASE_ANON_KEY=your-anon-key
 - **Workflow definitions are immutable once published.** Published rows cannot be edited.
 - **step_runs.input stores RESOLVED config** (templates already filled in).
 - **runs.context is the shared scratchpad** — the ONLY mechanism for passing data between steps.
-- **Alembic handles DDL. Matrx-ORM handles runtime data access.** These are complementary.
 - **Every DB query is parameterized.** No string interpolation, no f-strings in queries.
 
 ---
@@ -227,7 +225,6 @@ VITE_SUPABASE_ANON_KEY=your-anon-key
   **PRIORITY 1 — Get a database running (D2):**
   You have Matrx-ORM models in `backend/db/models.py` but no migrations have been applied to any database. Either:
   - (a) Run `docker-compose up postgres` and use Matrx-ORM's migration tools (`uv run python db/run_migrations.py`) to create the schema, OR
-  - (b) Write Alembic migrations for the 4 tables + indexes + trigger from the spec
 
   **PRIORITY 2 — Verify Docker Compose actually works (D6):**
   Run `docker-compose up` end-to-end. Verify all 4 services start with health checks passing. This has never been done. Fix any issues.

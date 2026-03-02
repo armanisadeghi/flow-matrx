@@ -1,129 +1,122 @@
 # Next Priorities — Flow Matrx
 
-**Date:** 2026-03-01
-**Status after engine core:** Phase 1 complete. Engine can execute complex DAGs with parallel steps, conditions, pausing, retries, for_each, registered functions, and real-time events. 132 tests passing.
+**Date:** 2026-03-01  
+**Status:** Engine + DB layer integration complete. 132 tests passing (all mocked — zero real DB coverage). System has not been tested against a live database. Type correctness in the DB/API boundary layer is unverified and likely has runtime failures.
 
 ---
 
-## Priority 1: Database & Backend Online (Blocking everything else)
+## Priority 1: Fix Type Correctness in the DB/API Boundary (Blocking everything)
 
-### 1a. Create the database
-- Run `scripts/schema.sql` against your Supabase instance
-- Verify all 4 tables, indexes, triggers, and CHECK constraints are live
-- The schema is final — the SQL file is the source of truth
+The core problem: `WfCore` mixes return types inconsistently and `_model_to_dict` is incomplete. When a real DB connection is active, these will produce runtime `TypeError` and Pydantic validation errors.
 
-### 1b. Verify Matrx-ORM models match the schema
-- Run Matrx-ORM reverse migration to regenerate `db/models.py`
-- Confirm `runs.created_by` column exists (newly added)
-- Test a round-trip: create workflow → start run → verify step_runs + run_events populate
+### 1a. Audit and fix `WfCore` return type consistency
 
-### 1c. Write the first Alembic migration
-- `alembic init` if not already done
-- Migration 001 should match `scripts/schema.sql` exactly
-- This is the baseline — all future changes go through Alembic
+**Decision to enforce:** `WfCore` methods used by the API layer always return Pydantic response models. Methods used only by the executor (`get_run`, `get_step_runs`, `get_workflow`) may return raw ORM models for efficiency, but must be clearly typed and documented.
 
----
+Specific problems to fix in `app/db/custom/core.py`:
 
-## Priority 2: End-to-End Smoke Test (Proves the engine works for real)
+- `get_run` / `get_runs` / `create_run` / `update_run` use `item.__dict__` directly — but ORM model `__dict__` contains UUID objects (not strings), OpenDict instances, and FK proxy objects that Pydantic cannot validate without coercion
+- `get_step_runs_for_run` uses `item.__dict__` — same problem; `StepRunResponse` expects `run_id: str` but ORM gives a UUID FK object
+- `get_run_events` / `create_run_event` / `update_run_event` use `item.__dict__` — same FK/UUID issue
+- `list_workflows_for_user` / `list_workflows_for_org` use `item.__dict__` — bypasses `_model_to_dict` which handles JSONB dataclasses
+- `_model_to_dict` handles dataclass fields via `asdict()` but does NOT handle: UUID fields (need `str()`), FK fields (proxy objects), datetime fields, or `None` values from nullable fields
 
-### 2a. Seed a real workflow
-- Use `scripts/seed-workflow.py` (already exists) to insert the sample HTTP + LLM workflow
-- Or create a simpler 3-step transform-only workflow for testing without external deps
+### 1b. Fix `_model_to_dict` to be a proper ORM→dict serializer
 
-### 2b. Trigger a run via the API
-- `POST /api/v1/workflows/{id}/run` with `{"input": {...}}`
-- Verify the engine executes, populates step_runs, emits events
-- Check `GET /api/v1/runs/{id}` returns completed status with full context
+Must handle:
+- UUID fields → `str(value)`
+- FK fields (proxy objects) → `str(value.pk)` or just the FK id value
+- Dataclass JSONB fields → `asdict(value)` but with care: `WfWorkflowInputSchema` serializes to `{"extra": {}}` when `WorkflowResponse.input_schema` expects `dict | None`
+- Datetime fields → pass through (Pydantic handles these)
+- `None` nullable fields → pass through
 
-### 2c. Test the WebSocket
-- Connect to `WS /ws/runs/{id}` during execution
-- Verify snapshot arrives on connect, then live events stream
+### 1c. Settle the JSONB type design
 
-### 2d. Test pause/resume
-- Create a workflow with a `wait_for_approval` step
-- Trigger run → verify it pauses
-- Call `POST /api/v1/runs/{id}/resume` → verify it continues to completion
+Currently `jsonb_types.py` has a mix:
+- `WfWorkflowDefinition` is a proper dataclass (`.nodes`, `.edges`) — good
+- `WfWorkflowInputSchema` is a dataclass with only `.extra: dict` — unclear value; API returns `dict | None`
+- `WfRunInput`, `WfRunContext`, `WfRunEventPayload`, `WfStepRunInput`, `WfStepRunOutput` are all `OpenDict` aliases
 
----
+**Decision needed:** For every JSONB field, decide: typed dataclass (strict fields) vs. OpenDict (pass-through). Current recommendation:
+- `WfWorkflowDefinition` — keep as typed dataclass (`.nodes: list`, `.edges: list`)
+- `WfWorkflowInputSchema` — change to `OpenDict` (it's user-defined JSON schema, open structure)
+- `WfRunInput` / `WfRunContext` — keep as `OpenDict` (engine writes arbitrary step_id keys)
+- `WfRunEventPayload` — keep as `OpenDict` (payload shape varies per event type)
+- `WfStepRunInput` / `WfStepRunOutput` — keep as `OpenDict` (step-type-specific)
 
-## Priority 3: Frontend Foundation
+### 1d. Fix the executor's `get_run` return type
 
-### 3a. Project scaffolding
-- Vite + React 19 + TypeScript strict mode
-- Tailwind 4.2 + shadcn/ui setup
-- React Router with SPA mode
-- Zustand store skeleton
-- TanStack Query configuration pointing at backend
+`execute_run` calls `wf_core.get_run(run_id)` and expects `.status`, `.workflow_id`, `.context`, `.input`. Currently `get_run` returns `RunResponse` (Pydantic), which works. But `run.context` is `dict[str, Any]` and `run.input` is `dict[str, Any]` in the schema — these need to actually be plain dicts, not OpenDict instances wrapped in a Pydantic model.
 
-### 3b. Workflow canvas (React Flow)
-- Drag-and-drop step palette (sourced from `GET /api/v1/catalog/steps`)
-- Node components for each step type (at minimum: transform, http_request, condition)
-- Edge connections with condition labels on sourceHandle
-- Save/load workflow definition to/from API
-
-### 3c. Config panels
-- Side panel that opens when a node is selected
-- Form fields generated from the step's `config_schema`
-- Template autocompletion (suggest `{{upstream_step.field}}` based on graph)
+Verify: does Pydantic v2 validate `OpenDict` as `dict[str, Any]`? It should, since `OpenDict` is a `dict` subclass. Confirm this is safe.
 
 ---
 
-## Priority 4: Live Run Visualization
+## Priority 2: Unit Tests for the DB Layer (With a Real or Faked Connection)
 
-### 4a. Run viewer component
-- Subscribe to WebSocket for run ID
-- Render the workflow graph with live status colors per node
-- Show step output in a detail panel when a node is clicked
+All current 132 tests mock the DB entirely. We have zero coverage of:
+- Whether `_model_to_dict` produces valid input for Pydantic models
+- Whether ORM model fields serialize correctly (UUID, datetime, FK proxies)
+- Whether `WfCore` methods produce the right output shapes
 
-### 4b. Approval flow UI
-- Detect `step.waiting` events
-- Show an approval dialog with the prompt text
-- POST resume on approval
+### 2a. Write unit tests for `_model_to_dict` with fake ORM model instances
 
-### 4c. Run history page
-- List all runs with status, duration, trigger type
-- Click to open the run viewer for replay
+Create fake ORM instances that mimic the field types the real ORM returns (UUID objects, FK proxies, OpenDict, WfWorkflowDefinition dataclass) and assert that `_model_to_dict` + Pydantic validation succeeds.
 
----
+### 2b. Write unit tests for every `WfCore` method
 
-## Priority 5: Hardening & Production Features
+Mock the underlying managers (`self.workflows`, `self.runs`, etc.) at the `WfCore` level — not at the raw DB level — and verify that every public method returns the declared return type with correct field values.
 
-### 5a. Auth integration
-- Wire Supabase JWT auth to FastAPI
-- Populate `workflows.created_by` and `runs.created_by` from JWT
-- Inject `context["_user"]` so registered functions can access user info
+### 2c. Write unit tests for the executor with properly typed fakes
 
-### 5b. Function registry loading from config
-- Load registered functions at startup from a config file or DB table
-- Add `GET /api/v1/catalog/functions` endpoint
-- Optional: schema validation of function args at registration time
-
-### 5c. Scheduled and webhook triggers
-- ARQ job for scheduled workflow execution
-- `POST /api/v1/triggers/webhook/{workflow_id}` endpoint
-- `runs.trigger_type` already supports these values
-
-### 5d. Workflow versioning UI
-- Show version history
-- Diff between versions
-- "Duplicate as new draft" flow
-
-### 5e. Production deployment
-- Docker images for backend
-- Vercel/Cloudflare deployment for frontend
-- Environment variable management
-- Health check endpoint
+The current `test_executor.py` uses `FakeRun` / `FakeWorkflow` / `FakeStepRun` objects. Verify these match the actual attribute shapes that the executor accesses:
+- `run.status`, `run.workflow_id`, `run.context`, `run.input` — match `RunResponse`
+- `workflow.definition.nodes`, `workflow.definition.edges` — match `WfWorkflow.definition`
+- `sr.status`, `sr.step_id`, `sr.id` — match `WfStepRun`
 
 ---
 
-## Known Gaps (Not blocking, but track them)
+## Priority 3: API Route Tests
 
-| Gap | Impact | When to fix |
-|-----|--------|-------------|
-| Registered functions have no arg-level schema enforcement | Runtime errors on bad args | Priority 5b |
-| Registered functions cannot access user info | No user-aware custom functions | Priority 5a |
-| Registered functions cannot emit progress events | No mid-step streaming | Future: add optional callback param |
-| `send_email` handler is a placeholder | Email step doesn't actually send | When email infra is ready |
-| No rate limiting on API endpoints | Abuse risk in production | Priority 5e |
-| No WebSocket authentication | Anyone with a run ID can subscribe | Priority 5a |
-| `step_runs` grows unbounded for high-retry workflows | Storage bloat | Add TTL/archival policy later |
+After the DB layer is correct, test every FastAPI endpoint:
+- Request → validated → `wf_core` call → response shape
+- Error cases: 404 (not found), 409 (state conflicts), 422 (validation failures)
+- Use FastAPI `TestClient` with `wf_core` mocked at the module level
+
+---
+
+## Priority 4: Live Database Smoke Test
+
+Only attempt after Priorities 1–3 are green.
+
+- Run `scripts/schema.sql` against Supabase
+- Confirm ORM models match schema (reverse migration check)
+- `POST /api/v1/workflows` → create workflow
+- `POST /api/v1/workflows/{id}/publish`
+- `POST /api/v1/workflows/{id}/run` → triggers engine
+- `GET /api/v1/runs/{id}` → verify completed with context
+- `WS /ws/runs/{id}` → verify snapshot + event stream
+
+---
+
+## Priority 5: Frontend (After Backend is Verified)
+
+Frontend already scaffolded but has TypeScript build errors (BaseNode type mismatch in `@xyflow/react` NodeProps, and API client URLs don't match backend routes). Do not invest here until backend is fully verified.
+
+- Fix `BaseNode.tsx` type: add index signature to `BaseNodeData`
+- Align `src/api/runs.ts` URL patterns with actual FastAPI routes
+- Fix `src/api/workflows.ts` URL patterns
+
+---
+
+## Known Gaps (Track, don't fix yet)
+
+| Gap | When to fix |
+|-----|-------------|
+| Auth: no Supabase JWT wired to FastAPI | After smoke test passes |
+| `created_by` / `org_id` / `user_id` hardcoded or missing | After auth integration |
+| `send_email` handler is a placeholder | When email infra is ready |
+| No rate limiting on API endpoints | Before production |
+| No WebSocket authentication | Before production |
+| Function registry: no arg-level schema enforcement | Priority 5b (original) |
+| Scheduled/webhook triggers (ARQ) | After frontend foundation |

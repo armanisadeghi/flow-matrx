@@ -33,7 +33,6 @@ flow-matrx/
 - **Python 3.14** | **FastAPI 0.131** | **Matrx-ORM 2.0.10** | **asyncpg 0.31**
 - **uv** for all package management (no pip, no poetry)
 - **Pydantic 2.12** for validation | **structlog 24.4** for logging
-- **Alembic 1.18** for migrations | **ARQ 0.27** + Redis for background tasks
 - **httpx 0.28** for async HTTP | **Jinja2 3.1** for template resolution
 - **orjson 3.11** for fast JSON
 
@@ -229,7 +228,6 @@ make stop                   # docker-compose down
 uv sync                     # Install deps
 uv run uvicorn app.main:app --reload --port 8000  # Run server
 uv run pytest tests/ -v     # Run tests
-alembic upgrade head        # Run migrations
 
 # Frontend (from frontend/)
 pnpm install                # Install deps

@@ -15,7 +15,7 @@ are overwritten each time the generator runs. Everything else is yours to edit f
 | Field | Value |
 |-------|-------|
 | Module | `` |
-| Last generated | 2026-03-01 09:12 |
+| Last generated | 2026-03-01 16:10 |
 | Output file | `MODULE_README.md` |
 | Signature mode | `signatures` |
 
@@ -24,8 +24,8 @@ are overwritten each time the generator runs. Everything else is yours to edit f
 
 | README | |
 |--------|---|
-| [`backend/MODULE_README.md`](backend/MODULE_README.md) | last generated 2026-03-01 09:12 |
-| [`frontend/MODULE_README.md`](frontend/MODULE_README.md) | last generated 2026-03-01 09:12 |
+| [`backend/MODULE_README.md`](backend/MODULE_README.md) | last generated 2026-03-01 15:50 |
+| [`frontend/MODULE_README.md`](frontend/MODULE_README.md) | last generated 2026-03-01 15:46 |
 **To refresh auto-sections:**
 ```bash
 python utils/code_context/generate_module_readme.py  --mode signatures
@@ -59,7 +59,7 @@ python utils/code_context/generate_module_readme.py  --mode signatures
 <!-- AUTO:tree -->
 ## Directory Tree
 
-> Auto-generated. 127 files across 33 directories.
+> Auto-generated. 143 files across 37 directories.
 
 ```
 ./
@@ -72,6 +72,13 @@ python utils/code_context/generate_module_readme.py  --mode signatures
 ├── .claude/
 ├── MODULE_README.md
 ├── backend/
+│   ├── .python-version
+│   ├── .ruff_cache/
+│   │   ├── 0.15.4/
+│   │   │   ├── 12021274698734572941
+│   │   │   ├── 4535874907050587676
+│   │   │   ├── 506637981269138909
+│   │   ├── CACHEDIR.TAG
 │   ├── MODULE_README.md
 │   ├── app/
 │   │   ├── __init__.py
@@ -86,18 +93,33 @@ python utils/code_context/generate_module_readme.py  --mode signatures
 │   │   ├── auth/
 │   │   │   ├── __init__.py
 │   │   │   ├── jwt.py
+│   │   ├── bootstrap.py
 │   │   ├── config.py
 │   │   ├── db/
 │   │   │   ├── __init__.py
-│   │   │   ├── connection.py
+│   │   │   ├── custom/
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── core.py
+│   │   │   │   ├── user.py
+│   │   │   ├── fields.py
+│   │   │   ├── generate.py
+│   │   │   ├── helpers/
+│   │   │   │   ├── auto_config.py
+│   │   │   ├── jsonb_types.py
+│   │   │   ├── managers/
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── org.py
+│   │   │   │   ├── org_member.py
+│   │   │   │   ├── resource_share.py
+│   │   │   │   ├── user_profile.py
+│   │   │   │   ├── wf_run.py
+│   │   │   │   ├── wf_run_event.py
+│   │   │   │   ├── wf_step_run.py
+│   │   │   │   ├── wf_workflow.py
 │   │   │   ├── models/
-│   │   │   │   ├── __init__.py
+│   │   │   ├── models.py
 │   │   │   ├── queries/
-│   │   │   │   ├── __init__.py
-│   │   │   │   ├── runs.py
-│   │   │   │   ├── step_runs.py
-│   │   │   │   ├── workflows.py
-│   │   │   ├── schemas.py
+│   │   │   ├── run_migrations.py
 │   │   ├── dependencies.py
 │   │   ├── engine/
 │   │   │   ├── __init__.py
@@ -130,14 +152,13 @@ python utils/code_context/generate_module_readme.py  --mode signatures
 │   │   │   ├── wait_for_approval.py
 │   │   │   ├── wait_for_event.py
 │   │   │   ├── webhook.py
+│   │   ├── types/
+│   │   │   ├── schemas.py
 │   │   ├── validation/
 │   │   │   ├── __init__.py
 │   │   │   ├── workflow.py
-│   ├── db/
-│   │   ├── __init__.py
-│   │   ├── generate.py
-│   │   ├── models.py
-│   │   ├── run_migrations.py
+│   ├── reports/
+│   ├── sample_data/
 │   ├── tests/
 │   │   ├── conftest.py
 │   │   ├── integration/
@@ -156,6 +177,8 @@ python utils/code_context/generate_module_readme.py  --mode signatures
 │   │   ├── test_steps.py
 │   │   ├── test_templates.py
 │   │   ├── test_validation.py
+│   ├── utils_dev/
+│   │   ├── generate_readme.py
 ├── frontend/
 │   ├── MODULE_README.md
 │   ├── index.html
@@ -221,6 +244,10 @@ python utils/code_context/generate_module_readme.py  --mode signatures
 │   │   │   ├── workflowStore.ts
 │   │   ├── types/
 │   │   │   ├── index.ts
+│   │   ├── utils/
+│   │   │   ├── supabase.ts
+│   ├── vite.config.d.ts
+│   ├── vite.config.js
 │   ├── vite.config.ts
 ├── packages/
 │   ├── shared/
@@ -229,11 +256,8 @@ python utils/code_context/generate_module_readme.py  --mode signatures
 │   │   │   ├── run.ts
 │   │   │   ├── workflow.ts
 ├── scripts/
-│   ├── run-migration.sh
 │   ├── seed-workflow.py
-├── utils_dev/
-│   ├── generate_readme.py
-# excluded: 41 .md, 7 .json, 3 .yaml, 2 .example, 2 (no ext), 1 .yml, 1 .toml, 1 .lock, 1 .css, 1 .svg
+# excluded: 44 .md, 9 .json, 5 (no ext), 4 .yaml, 2 .example, 2 .tsbuildinfo, 1 .yml, 1 .sql, 1 .toml, 1 .lock, 1 .css, 1 .svg
 ```
 <!-- /AUTO:tree -->
 
@@ -245,19 +269,6 @@ python utils/code_context/generate_module_readme.py  --mode signatures
 > Submodules with their own `MODULE_README.md` are collapsed to a single stub line.
 
 ```
----
-Filepath: utils_dev/generate_readme.py  [python]
-
-
-
-
----
-Filepath: scripts/run-migration.sh  [unknown (.sh)]
-
-  # signature extraction not supported for this language
-
-
-
 ---
 Filepath: scripts/seed-workflow.py  [python]
 
@@ -302,10 +313,10 @@ Filepath: packages/shared/types/workflow.ts  [typescript]
 
 
 ---
-Submodule: backend/  [54 files — full detail in backend/MODULE_README.md]
+Submodule: backend/  [69 files — full detail in backend/MODULE_README.md]
 
 ---
-Submodule: frontend/  [50 files — full detail in frontend/MODULE_README.md]
+Submodule: frontend/  [53 files — full detail in frontend/MODULE_README.md]
 
 ```
 <!-- /AUTO:signatures -->
@@ -333,10 +344,22 @@ Submodule: frontend/  [50 files — full detail in frontend/MODULE_README.md]
   "include_call_graph": false,
   "entry_points": null,
   "call_graph_exclude": [
-    "tests"
+    "tests",
+    "logs",
+    "migrations",
+    "reports",
+    "sample_data",
+    "temp",
+    "tmp"
   ],
   "signatures_exclude": [
-    "tests"
+    "tests",
+    "logs",
+    "migrations",
+    "reports",
+    "sample_data",
+    "temp",
+    "tmp"
   ]
 }
 ```

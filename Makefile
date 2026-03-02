@@ -1,4 +1,4 @@
-.PHONY: dev dev-bg stop install backend-install frontend-install migrate migrate-new test test-backend test-frontend test-integration lint lint-backend lint-frontend seed clean
+.PHONY: dev dev-bg stop install backend-install frontend-install test test-backend test-frontend test-integration lint lint-backend lint-frontend seed clean
 
 # ---------- Docker ----------
 dev:
@@ -18,13 +18,6 @@ frontend-install:
 	cd frontend && pnpm install
 
 install: backend-install frontend-install
-
-# ---------- Migrations ----------
-migrate:
-	cd backend && uv run alembic upgrade head
-
-migrate-new:
-	cd backend && uv run alembic revision --autogenerate -m "$(name)"
 
 # ---------- Tests ----------
 test-backend:

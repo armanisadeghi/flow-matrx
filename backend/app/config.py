@@ -138,7 +138,7 @@ class DirectorySettings:
 
     def __init__(self, base_dir: Path) -> None:
         self.base_dir: Path = base_dir
-        self.temp_dir: Path = base_dir / "tmp"
+        self.temp_dir: Path = base_dir / "temp"
         self.reports_dir: Path = base_dir / "reports"
         self.logs_dir: Path = base_dir / "logs"
         self.sample_data_dir: Path = base_dir / "sample_data"
@@ -151,7 +151,7 @@ class DirectorySettings:
         return (
             f"DirectorySettings("
             f"base={self.base_dir}, "
-            f"tmp={self.temp_dir}, "
+            f"temp={self.temp_dir}, "
             f"reports={self.reports_dir}, "
             f"logs={self.logs_dir}, "
             f"sample_data={self.sample_data_dir})"

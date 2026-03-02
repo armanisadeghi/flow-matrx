@@ -1,11 +1,11 @@
-import structlog
 from contextlib import asynccontextmanager
+
+import structlog
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.router import router
 from app.config import settings
-import app.db.connection  # noqa: F401 — registers the database on import
 
 logger = structlog.get_logger(__name__)
 

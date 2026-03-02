@@ -17,56 +17,63 @@ def _make_edge(source: str, target: str, **kwargs: object) -> dict:
 
 class TestValidateWorkflow:
     def test_empty_nodes_error(self):
-        errors = validate_workflow({"nodes": [], "edges": []})
-        assert any("at least one node" in e for e in errors)
+        result = validate_workflow({"nodes": [], "edges": []})
+        assert not result.valid
+        assert any("at least one node" in e for e in result.errors)
 
     def test_valid_linear_workflow(self):
         definition = {
             "nodes": [_make_node("a"), _make_node("b")],
             "edges": [_make_edge("a", "b")],
         }
-        errors = validate_workflow(definition)
-        assert errors == []
+        result = validate_workflow(definition)
+        assert result.valid
+        assert result.errors == []
 
     def test_dangling_edge_source(self):
         definition = {
             "nodes": [_make_node("a")],
             "edges": [_make_edge("ghost", "a")],
         }
-        errors = validate_workflow(definition)
-        assert any("ghost" in e for e in errors)
+        result = validate_workflow(definition)
+        assert not result.valid
+        assert any("ghost" in e for e in result.errors)
 
     def test_dangling_edge_target(self):
         definition = {
             "nodes": [_make_node("a")],
             "edges": [_make_edge("a", "ghost")],
         }
-        errors = validate_workflow(definition)
-        assert any("ghost" in e for e in errors)
+        result = validate_workflow(definition)
+        assert not result.valid
+        assert any("ghost" in e for e in result.errors)
 
     def test_cycle_detection(self):
         definition = {
             "nodes": [_make_node("a"), _make_node("b")],
             "edges": [_make_edge("a", "b"), _make_edge("b", "a")],
         }
-        errors = validate_workflow(definition)
-        assert any("cycle" in e.lower() for e in errors)
+        result = validate_workflow(definition)
+        assert not result.valid
+        assert any("cycle" in e.lower() for e in result.errors)
 
     def test_orphan_detection(self):
         definition = {
             "nodes": [_make_node("a"), _make_node("b"), _make_node("orphan")],
             "edges": [_make_edge("a", "b")],
         }
-        errors = validate_workflow(definition)
-        assert any("orphan" in e.lower() for e in errors)
+        result = validate_workflow(definition)
+        assert not result.valid
+        assert any("orphan" in e.lower() for e in result.errors)
 
     def test_unregistered_step_type(self):
         definition = {
             "nodes": [{"id": "a", "type": "nonexistent_type", "data": {"config": {}}}],
             "edges": [],
         }
-        errors = validate_workflow(definition)
-        assert any("unregistered" in e.lower() for e in errors)
+        result = validate_workflow(definition)
+        assert not result.valid
+        assert any("unregistered" in e.lower() for e in result.errors)
 
     def test_condition_engine_handled_type_accepted(self):
         definition = {
@@ -82,8 +89,8 @@ class TestValidateWorkflow:
                 _make_edge("cond", "no", sourceHandle="false"),
             ],
         }
-        errors = validate_workflow(definition)
-        unregistered = [e for e in errors if "unregistered" in e.lower()]
+        result = validate_workflow(definition)
+        unregistered = [e for e in result.errors if "unregistered" in e.lower()]
         assert unregistered == []
 
     def test_wait_for_approval_engine_handled_type_accepted(self):
@@ -94,8 +101,8 @@ class TestValidateWorkflow:
             ],
             "edges": [_make_edge("start", "approval")],
         }
-        errors = validate_workflow(definition)
-        unregistered = [e for e in errors if "unregistered" in e.lower()]
+        result = validate_workflow(definition)
+        unregistered = [e for e in result.errors if "unregistered" in e.lower()]
         assert unregistered == []
 
     def test_condition_missing_true_branch(self):
@@ -106,8 +113,9 @@ class TestValidateWorkflow:
             ],
             "edges": [_make_edge("cond", "no", sourceHandle="false")],
         }
-        errors = validate_workflow(definition)
-        assert any("missing 'true'" in e for e in errors)
+        result = validate_workflow(definition)
+        assert not result.valid
+        assert any("missing 'true'" in e for e in result.errors)
 
     def test_condition_missing_false_branch(self):
         definition = {
@@ -117,8 +125,9 @@ class TestValidateWorkflow:
             ],
             "edges": [_make_edge("cond", "yes", sourceHandle="true")],
         }
-        errors = validate_workflow(definition)
-        assert any("missing 'false'" in e for e in errors)
+        result = validate_workflow(definition)
+        assert not result.valid
+        assert any("missing 'false'" in e for e in result.errors)
 
     def test_condition_edge_data_condition_format(self):
         definition = {
@@ -134,8 +143,8 @@ class TestValidateWorkflow:
                 _make_edge("cond", "no", data={"condition": "false"}),
             ],
         }
-        errors = validate_workflow(definition)
-        condition_errors = [e for e in errors if "missing" in e and ("true" in e or "false" in e)]
+        result = validate_workflow(definition)
+        condition_errors = [e for e in result.errors if "missing" in e and ("true" in e or "false" in e)]
         assert condition_errors == []
 
     def test_template_ref_to_input_is_valid(self):
@@ -147,8 +156,8 @@ class TestValidateWorkflow:
             ],
             "edges": [],
         }
-        errors = validate_workflow(definition)
-        ref_errors = [e for e in errors if "references" in e and "not an upstream" in e]
+        result = validate_workflow(definition)
+        ref_errors = [e for e in result.errors if "references" in e and "not an upstream" in e]
         assert ref_errors == []
 
     def test_template_ref_to_nonexistent_upstream_fails(self):
@@ -161,8 +170,9 @@ class TestValidateWorkflow:
             ],
             "edges": [_make_edge("a", "b")],
         }
-        errors = validate_workflow(definition)
-        assert any("nonexistent_step" in e for e in errors)
+        result = validate_workflow(definition)
+        assert not result.valid
+        assert any("nonexistent_step" in e for e in result.errors)
 
     def test_template_ref_to_actual_upstream_is_valid(self):
         definition = {
@@ -174,6 +184,6 @@ class TestValidateWorkflow:
             ],
             "edges": [_make_edge("a", "b")],
         }
-        errors = validate_workflow(definition)
-        ref_errors = [e for e in errors if "references" in e and "not an upstream" in e]
+        result = validate_workflow(definition)
+        ref_errors = [e for e in result.errors if "references" in e and "not an upstream" in e]
         assert ref_errors == []

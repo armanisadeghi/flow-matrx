@@ -53,13 +53,6 @@ class DatabaseSettings(BaseSettings):
         pw = self.password.get_secret_value()
         return f"{self.protocol}://{self.user}:{pw}@{self.host}:{self.port}/{self.name}"
 
-    @property
-    def sync_url(self) -> str:
-        """Synchronous connection URL (psycopg2 / alembic)."""
-        pw = self.password.get_secret_value()
-        return f"postgresql+psycopg2://{self.user}:{pw}@{self.host}:{self.port}/{self.name}"
-
-
 class SupabaseSettings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="SUPABASE_", extra="ignore")
 

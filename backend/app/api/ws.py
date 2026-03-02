@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-from uuid import UUID
 
 import structlog
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
@@ -13,16 +12,13 @@ router = APIRouter()
 
 
 async def _build_snapshot(run_id: str) -> dict:
-    from app.db.models import (
-        run_manager_instance as run_mgr,
-        step_run_manager_instance as sr_mgr,
-    )
+    from app.db.custom import wf_core
 
-    run = await run_mgr.load_by_id(run_id)
-    if run is None:
+    run = await wf_core.get_run(run_id)
+    if not run:
         return {"type": "snapshot", "run_id": run_id, "error": "Run not found"}
 
-    step_runs = await sr_mgr.filter_items(run_id=run_id)
+    step_runs = await wf_core.get_step_runs({"run_id": run_id})
     steps_data = [
         {
             "step_id": sr.step_id,
@@ -44,7 +40,7 @@ async def _build_snapshot(run_id: str) -> dict:
 
 
 @router.websocket("/ws/runs/{run_id}")
-async def run_websocket(websocket: WebSocket, run_id: UUID) -> None:
+async def run_websocket(websocket: WebSocket, run_id: str) -> None:
     await websocket.accept()
     run_id_str = str(run_id)
     queue: asyncio.Queue[dict] = asyncio.Queue(maxsize=256)

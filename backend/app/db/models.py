@@ -18,8 +18,8 @@ from matrx_orm import (
     model_registry,
 )
 
-from db.fields import TypedJSONBField
-from db.jsonb_types import (
+from .fields import TypedJSONBField
+from .jsonb_types import (
     OrgMetadata,
     UserProfileMetadata,
     WfRunContext,

@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Callable, Coroutine
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any, Protocol
-from uuid import UUID
 
 import structlog
 
+from app.db.custom import wf_core
 from app.events.types import EventType
 
 logger = structlog.get_logger(__name__)
@@ -35,9 +35,8 @@ class _DefaultPersister:
         step_id: str | None,
         payload: dict[str, Any],
     ) -> None:
-        from app.db.models import run_event_manager_instance as mgr
 
-        await mgr.create_item(
+        await wf_core.create_run_event(
             run_id=run_id,
             step_id=step_id,
             event_type=event_type,
@@ -49,9 +48,7 @@ class EventBus:
     def __init__(self, persister: EventPersister | None = None) -> None:
         self._persister: EventPersister = persister or _DefaultPersister()
         self._subscribers: dict[str, list[asyncio.Queue[dict[str, Any]]]] = {}
-        self._listeners: list[
-            Callable[[dict[str, Any]], Coroutine[Any, Any, None]]
-        ] = []
+        self._listeners: list[Callable[[dict[str, Any]], Coroutine[Any, Any, None]]] = []
 
     # -- subscription ----------------------------------------------------------
 
@@ -71,9 +68,7 @@ class EventBus:
         if not subscribers:
             self._subscribers.pop(run_id, None)
 
-    def add_listener(
-        self, callback: Callable[[dict[str, Any]], Coroutine[Any, Any, None]]
-    ) -> None:
+    def add_listener(self, callback: Callable[[dict[str, Any]], Coroutine[Any, Any, None]]) -> None:
         """Register a global listener called on every event (useful for metrics)."""
         self._listeners.append(callback)
 
@@ -86,7 +81,7 @@ class EventBus:
 
     async def emit(
         self,
-        run_id: UUID | str,
+        run_id: str | str,
         event_type: EventType | str,
         step_id: str | None = None,
         payload: dict[str, Any] | None = None,
@@ -99,7 +94,7 @@ class EventBus:
             "type": event_type_str,
             "event_type": event_type_str,
             "run_id": run_id_str,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
         }
         if step_id is not None:
             event["step_id"] = step_id
@@ -121,9 +116,7 @@ class EventBus:
             try:
                 queue.put_nowait(event)
             except asyncio.QueueFull:
-                logger.warning(
-                    "Subscriber queue full, dropping event", run_id=run_id_str
-                )
+                logger.warning("Subscriber queue full, dropping event", run_id=run_id_str)
 
         # Fan-out to global listeners
         for listener in self._listeners:

@@ -1,7 +1,7 @@
 """Tests for the WorkflowEngine executor — full execution loop with mocked DB.
 
-The conftest pre-mocks `app.db.models` so matrx_orm is never imported.
-We set up the mock manager instances before each test to simulate DB behavior.
+The conftest pre-mocks `app.db.custom` so matrx_orm is never imported.
+We configure wf_core_mock before each test to simulate DB behavior.
 """
 
 from __future__ import annotations
@@ -10,17 +10,17 @@ import asyncio
 import sys
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 import pytest
 
 from app.engine.executor import WorkflowEngine
 from app.events.bus import EventBus
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _node(
     nid: str,
@@ -41,6 +41,7 @@ def _edge(src: str, tgt: str, **kw: Any) -> dict:
 
 class FakeStepRun:
     def __init__(self, **kw: Any) -> None:
+        self.id = kw.get("id", str(uuid4()))
         for k, v in kw.items():
             setattr(self, k, v)
 
@@ -57,10 +58,18 @@ class FakeRun:
         self.completed_at = None
 
 
+class FakeDefinition:
+    """Mimics WfWorkflowDefinition dataclass."""
+
+    def __init__(self, nodes: list, edges: list) -> None:
+        self.nodes = nodes
+        self.edges = edges
+
+
 class FakeWorkflow:
     def __init__(self, definition: dict) -> None:
         self.id = str(uuid4())
-        self.definition = definition
+        self.definition = FakeDefinition(definition["nodes"], definition["edges"])
         self.status = "published"
 
 
@@ -68,65 +77,54 @@ def _setup_mocks(
     workflow_def: dict,
     run_input: dict | None = None,
 ) -> tuple[FakeRun, list[FakeStepRun]]:
-    """Wire up mock DB managers on the `app.db.models` mock module.
+    """Configure wf_core_mock to simulate DB behavior.
 
     Returns (run, step_runs_list) so tests can inspect final state.
     """
+    from tests.test_engine.conftest import wf_core_mock
+
     wf = FakeWorkflow(workflow_def)
     run = FakeRun(workflow_id=wf.id, input=run_input or {})
     step_runs: list[FakeStepRun] = []
 
-    # -- run manager -------------------------------------------------------
-    run_mgr = AsyncMock()
-
-    async def _load_run(rid: str) -> FakeRun:
+    # -- get_run / update_run ----------------------------------------------
+    async def _get_run(rid: str) -> FakeRun:
         return run
 
-    async def _update_run(rid: str, **kw: Any) -> None:
-        for k, v in kw.items():
+    async def _update_run(rid: str, updates: dict) -> FakeRun:
+        for k, v in updates.items():
             setattr(run, k, v)
+        return run
 
-    run_mgr.load_by_id = AsyncMock(side_effect=_load_run)
-    run_mgr.update_item = AsyncMock(side_effect=_update_run)
+    wf_core_mock.get_run = AsyncMock(side_effect=_get_run)
+    wf_core_mock.update_run = AsyncMock(side_effect=_update_run)
 
-    # -- workflow manager --------------------------------------------------
-    wf_mgr = AsyncMock()
-    wf_mgr.load_by_id = AsyncMock(return_value=wf)
+    # -- get_workflow -------------------------------------------------------
+    wf_core_mock.get_workflow = AsyncMock(return_value=wf)
 
-    # -- step_run manager --------------------------------------------------
-    sr_mgr = AsyncMock()
-
-    async def _filter_sr(**kw: Any) -> list[FakeStepRun]:
+    # -- step_run operations -----------------------------------------------
+    async def _get_step_runs(filters: dict) -> list[FakeStepRun]:
         return [
             sr for sr in step_runs
-            if all(str(getattr(sr, k, None)) == str(v) for k, v in kw.items())
+            if all(str(getattr(sr, k, None)) == str(v) for k, v in filters.items())
         ]
 
-    async def _create_sr(**kw: Any) -> FakeStepRun:
-        sr = FakeStepRun(**kw)
+    async def _create_step_run(data: dict) -> FakeStepRun:
+        sr = FakeStepRun(**data)
         step_runs.append(sr)
         return sr
 
-    async def _update_sr(_id: Any, _filter: dict | None = None, **kw: Any) -> None:
-        if _filter:
-            for sr in step_runs:
-                match = all(
-                    str(getattr(sr, k, None)) == str(v) for k, v in _filter.items()
-                )
-                if match:
-                    for k, v in kw.items():
-                        setattr(sr, k, v)
-                    return
+    async def _update_step_run(step_run_id: str, updates: dict) -> FakeStepRun | None:
+        for sr in step_runs:
+            if str(sr.id) == str(step_run_id):
+                for k, v in updates.items():
+                    setattr(sr, k, v)
+                return sr
+        return None
 
-    sr_mgr.filter_items = AsyncMock(side_effect=_filter_sr)
-    sr_mgr.create_item = AsyncMock(side_effect=_create_sr)
-    sr_mgr.update_item = AsyncMock(side_effect=_update_sr)
-
-    # -- wire into the mock module -----------------------------------------
-    mock_mod = sys.modules["app.db.models"]
-    mock_mod.run_manager_instance = run_mgr
-    mock_mod.workflow_manager_instance = wf_mgr
-    mock_mod.step_run_manager_instance = sr_mgr
+    wf_core_mock.get_step_runs = AsyncMock(side_effect=_get_step_runs)
+    wf_core_mock.create_step_run = AsyncMock(side_effect=_create_step_run)
+    wf_core_mock.update_step_run = AsyncMock(side_effect=_update_step_run)
 
     return run, step_runs
 
@@ -140,6 +138,7 @@ def _make_bus() -> EventBus:
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
+
 
 class TestLinearExecution:
     """3-step linear workflow: A → B → C using transform (pure, no side-effects)."""
@@ -156,7 +155,7 @@ class TestLinearExecution:
         }
         run, step_runs = _setup_mocks(wf, run_input={"x": 1})
         engine = WorkflowEngine(bus=_make_bus())
-        await engine.execute_run(UUID(run.id))
+        await engine.execute_run(str(run.id))
 
         assert run.status == "completed"
         completed = [sr for sr in step_runs if sr.status == "completed"]
@@ -184,7 +183,7 @@ class TestParallelExecution:
         }
         run, step_runs = _setup_mocks(wf)
         engine = WorkflowEngine(bus=_make_bus())
-        await engine.execute_run(UUID(run.id))
+        await engine.execute_run(str(run.id))
 
         assert run.status == "completed"
         completed = [sr for sr in step_runs if sr.status == "completed"]
@@ -209,7 +208,7 @@ class TestConditionBranching:
         }
         run, step_runs = _setup_mocks(wf)
         engine = WorkflowEngine(bus=_make_bus())
-        await engine.execute_run(UUID(run.id))
+        await engine.execute_run(str(run.id))
 
         assert run.status == "completed"
         skipped = [sr for sr in step_runs if sr.status == "skipped"]
@@ -233,7 +232,7 @@ class TestApprovalPause:
         }
         run, step_runs = _setup_mocks(wf)
         engine = WorkflowEngine(bus=_make_bus())
-        await engine.execute_run(UUID(run.id))
+        await engine.execute_run(str(run.id))
 
         assert run.status == "paused"
         waiting = [sr for sr in step_runs if sr.status == "waiting"]
@@ -256,7 +255,7 @@ class TestWaitForEventPause:
         }
         run, step_runs = _setup_mocks(wf)
         engine = WorkflowEngine(bus=_make_bus())
-        await engine.execute_run(UUID(run.id))
+        await engine.execute_run(str(run.id))
 
         assert run.status == "paused"
         waiting = [sr for sr in step_runs if sr.status == "waiting"]
@@ -278,7 +277,7 @@ class TestStepFailure:
         }
         run, step_runs = _setup_mocks(wf)
         engine = WorkflowEngine(bus=_make_bus())
-        await engine.execute_run(UUID(run.id))
+        await engine.execute_run(str(run.id))
 
         assert run.status == "failed"
 
@@ -301,7 +300,7 @@ class TestStepSkipOnError:
         }
         run, step_runs = _setup_mocks(wf)
         engine = WorkflowEngine(bus=_make_bus())
-        await engine.execute_run(UUID(run.id))
+        await engine.execute_run(str(run.id))
 
         assert run.status == "completed"
 
@@ -325,7 +324,7 @@ class TestEventEmission:
 
         bus.add_listener(capture)
         engine = WorkflowEngine(bus=bus)
-        await engine.execute_run(UUID(run.id))
+        await engine.execute_run(str(run.id))
 
         event_types = [e["event_type"] for e in events]
         assert "run.started" in event_types
@@ -350,7 +349,7 @@ class TestConcurrencyLimit:
         }
         run, step_runs = _setup_mocks(wf)
         engine = WorkflowEngine(bus=_make_bus(), max_concurrency=2)
-        await engine.execute_run(UUID(run.id))
+        await engine.execute_run(str(run.id))
 
         assert run.status == "completed"
         completed = [sr for sr in step_runs if sr.status == "completed"]
@@ -379,7 +378,7 @@ class TestResumeFromPaused:
 
         bus.add_listener(capture)
         engine = WorkflowEngine(bus=bus)
-        await engine.execute_run(UUID(run.id))
+        await engine.execute_run(str(run.id))
 
         event_types = [e["event_type"] for e in events]
         assert "run.started" not in event_types

@@ -12,7 +12,6 @@ from app.engine.function_registry import (
 )
 from app.steps.function_call import FunctionCallHandler
 
-
 # ---------------------------------------------------------------------------
 # Function Registry
 # ---------------------------------------------------------------------------

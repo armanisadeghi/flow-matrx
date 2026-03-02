@@ -41,7 +41,6 @@ from app.events.bus import EventBus
 from app.events.types import EventType
 from app.validation.workflow import validate_workflow
 
-
 # ---------------------------------------------------------------------------
 # Shared test fixtures — real workflow definitions, not mocks
 # ---------------------------------------------------------------------------
@@ -235,8 +234,8 @@ class TestLinearPipeline:
     def test_01_definition_is_valid(self, pipeline_state: dict) -> None:
         """The workflow definition passes all 7 validation checks."""
         definition = _linear_workflow()
-        errors = validate_workflow(definition)
-        assert errors == [], f"Validation failed: {errors}"
+        result = validate_workflow(definition)
+        assert result.valid, f"Validation failed: {result.errors}"
         pipeline_state["linear_definition"] = definition
         pipeline_state["linear_valid"] = True
 
@@ -454,8 +453,8 @@ class TestConditionPipeline:
 
     def test_01_condition_workflow_valid(self, pipeline_state: dict) -> None:
         definition = _condition_workflow()
-        errors = validate_workflow(definition)
-        assert errors == [], f"Condition workflow invalid: {errors}"
+        result = validate_workflow(definition)
+        assert result.valid, f"Condition workflow invalid: {result.errors}"
         pipeline_state["condition_definition"] = definition
 
     def test_02_condition_graph_has_branches(self, pipeline_state: dict) -> None:
@@ -527,8 +526,8 @@ class TestParallelPipeline:
 
     def test_01_parallel_workflow_valid(self, pipeline_state: dict) -> None:
         definition = _parallel_workflow()
-        errors = validate_workflow(definition)
-        assert errors == [], f"Parallel workflow invalid: {errors}"
+        result = validate_workflow(definition)
+        assert result.valid, f"Parallel workflow invalid: {result.errors}"
         pipeline_state["parallel_definition"] = definition
 
     def test_02_parallel_branches_both_ready(self, pipeline_state: dict) -> None:

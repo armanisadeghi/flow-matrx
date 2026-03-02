@@ -1,20 +1,15 @@
 from __future__ import annotations
 
-from uuid import UUID
-
 from fastapi import APIRouter, BackgroundTasks, HTTPException, status
 
-from app.db.schemas import (
-    ResumeRunRequest,
-    RunEventResponse,
-    RunResponse,
-    StepRunResponse,
-)
+from app.db.custom import wf_core
+from app.events.types import EventType
+from app.types.schemas import ResumeRunRequest, RunEventResponse, RunResponse, StepRunResponse
 
 router = APIRouter()
 
 
-async def _launch_engine(run_id: UUID) -> None:
+async def _launch_engine(run_id: str) -> None:
     from app.engine.executor import WorkflowEngine
 
     engine = WorkflowEngine()
@@ -23,10 +18,9 @@ async def _launch_engine(run_id: UUID) -> None:
 
 @router.get("/", response_model=list[RunResponse])
 async def list_runs_endpoint(
-    workflow_id: UUID | None = None,
+    workflow_id: str | None = None,
     run_status: str | None = None,
 ) -> list[RunResponse]:
-    from app.db.models import run_manager_instance as mgr
 
     filters: dict[str, str] = {}
     if workflow_id:
@@ -34,78 +28,60 @@ async def list_runs_endpoint(
     if run_status:
         filters["status"] = run_status
 
-    items = await mgr.filter_items(**filters) if filters else await mgr.load_items()
-    return [RunResponse(**item.__dict__) for item in items]
+    items = await wf_core.get_runs(filters)
+    return items
 
 
 @router.get("/{run_id}", response_model=RunResponse)
-async def get_run_endpoint(run_id: UUID) -> RunResponse:
-    from app.db.models import run_manager_instance as mgr
+async def get_run_endpoint(run_id: str) -> RunResponse:
 
-    item = await mgr.load_by_id(str(run_id))
-    if item is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Run not found")
-    return RunResponse(**item.__dict__)
+    item = await wf_core.get_run(str(run_id))
+    return item
 
 
 @router.get("/{run_id}/steps", response_model=list[StepRunResponse])
-async def get_run_steps_endpoint(run_id: UUID) -> list[StepRunResponse]:
-    from app.db.models import step_run_manager_instance as mgr
+async def get_run_steps_endpoint(run_id: str) -> list[StepRunResponse]:
 
-    items = await mgr.filter_items(run_id=str(run_id))
-    return [StepRunResponse(**item.__dict__) for item in items]
+    items = await wf_core.get_step_runs_for_run(str(run_id))
+    return items
 
 
 @router.get("/{run_id}/events", response_model=list[RunEventResponse])
-async def get_run_events_endpoint(run_id: UUID) -> list[RunEventResponse]:
-    from app.db.models import run_event_manager_instance as mgr
+async def get_run_events_endpoint(run_id: str) -> list[RunEventResponse]:
 
-    items = await mgr.filter_items(run_id=str(run_id))
-    return [RunEventResponse(**item.__dict__) for item in items]
+    items = await wf_core.get_run_events({"run_id": str(run_id)})
+    return items
 
 
 @router.post("/{run_id}/cancel", status_code=status.HTTP_202_ACCEPTED)
-async def cancel_run_endpoint(run_id: UUID) -> dict[str, str]:
-    from app.db.models import run_manager_instance as mgr
+async def cancel_run_endpoint(run_id: str) -> dict[str, str]:
 
-    run = await mgr.load_by_id(str(run_id))
-    if run is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Run not found")
-    if run.status not in ("running", "paused", "pending"):
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=f"Cannot cancel run in state: {run.status}")
-    await mgr.update_item(str(run_id), status="cancelled")
-    return {"message": "Cancellation requested", "run_id": str(run_id)}
+    if await wf_core.update_run(str(run_id), {"status": "cancelled"}):
+        return {"message": "Cancellation requested", "run_id": str(run_id)}
+    raise HTTPException(
+        status_code=status.HTTP_409_CONFLICT, detail="Cannot cancel run in current state"
+    )
 
 
 @router.post("/{run_id}/resume", status_code=status.HTTP_202_ACCEPTED)
 async def resume_run_endpoint(
-    run_id: UUID, payload: ResumeRunRequest, background_tasks: BackgroundTasks,
+    run_id: str,
+    payload: ResumeRunRequest,
+    background_tasks: BackgroundTasks,
 ) -> dict[str, str]:
-    from app.db.models import (
-        run_manager_instance as run_mgr,
-        step_run_manager_instance as sr_mgr,
-    )
-    from app.events.bus import event_bus
-    from app.events.types import EventType
 
-    run = await run_mgr.load_by_id(str(run_id))
-    if run is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Run not found")
+    run = await wf_core.get_run(str(run_id))
     if run.status != "paused":
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=f"Run is not paused, current state: {run.status}")
-
-    await sr_mgr.update_item(
-        None,
-        _filter={"run_id": str(run_id), "step_id": payload.step_id, "status": "waiting"},
-        status="completed",
-        output=payload.approval_data or {},
-        completed_at="now()",
-    )
-
-    await run_mgr.update_item(str(run_id), status="running")
-    await event_bus.emit(
-        run_id, EventType.RUN_RESUMED,
-        payload={"status": "running", "resumed_step_id": payload.step_id},
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Run is not paused, current state: {run.status}",
+        )
+    await wf_core.update_run(str(run_id), {"status": "running"})
+    await wf_core.create_run_event(
+        str(run_id),
+        EventType.RUN_RESUMED,
+        payload.step_id,
+        {"status": "running", "resumed_step_id": payload.step_id},
     )
 
     background_tasks.add_task(_launch_engine, run_id)
@@ -113,28 +89,19 @@ async def resume_run_endpoint(
 
 
 @router.post("/{run_id}/retry", status_code=status.HTTP_202_ACCEPTED)
-async def retry_run_endpoint(run_id: UUID, background_tasks: BackgroundTasks) -> dict[str, str]:
-    from app.db.models import (
-        run_manager_instance as run_mgr,
-        step_run_manager_instance as sr_mgr,
-    )
+async def retry_run_endpoint(run_id: str, background_tasks: BackgroundTasks) -> dict[str, str]:
 
-    run = await run_mgr.load_by_id(str(run_id))
-    if run is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Run not found")
+    run = await wf_core.get_run(str(run_id))
     if run.status != "failed":
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Only failed runs can be retried")
-
-    failed_steps = await sr_mgr.filter_items(run_id=str(run_id), status="failed")
-    for step in failed_steps:
-        await sr_mgr.update_item(
-            None,
-            _filter={"run_id": str(run_id), "step_id": step.step_id, "attempt": step.attempt},
-            status="pending",
-            error=None,
-            completed_at=None,
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="Only failed runs can be retried"
         )
 
-    await run_mgr.update_item(str(run_id), status="pending")
+    failed_steps = await wf_core.get_step_runs_for_run(str(run_id))
+    for step in failed_steps:
+        if step.status == "failed":
+            await wf_core.update_step_run(step.id, {"status": "pending"})
+
+    await wf_core.update_run(str(run_id), {"status": "pending"})
     background_tasks.add_task(_launch_engine, run_id)
     return {"message": "Retry requested", "run_id": str(run_id)}

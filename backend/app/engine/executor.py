@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import asyncio
 import time
+from datetime import UTC, datetime
 from typing import Any
-from uuid import UUID
 
 import structlog
 
@@ -34,6 +34,7 @@ _PAUSE_STEP_TYPES = frozenset({"wait_for_approval", "wait_for_event"})
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _truncate_for_display(
     output: dict[str, Any], max_keys: int = MAX_OUTPUT_KEYS_FOR_DISPLAY
 ) -> dict[str, Any]:
@@ -53,7 +54,7 @@ def _calculate_backoff(strategy: str, base: float, attempt: int) -> float:
         case "linear":
             return base * attempt
         case "exponential":
-            return min(base ** attempt, 300.0)  # cap at 5 minutes
+            return min(base**attempt, 300.0)  # cap at 5 minutes
         case _:
             return base
 
@@ -61,6 +62,7 @@ def _calculate_backoff(strategy: str, base: float, attempt: int) -> float:
 # ---------------------------------------------------------------------------
 # Engine
 # ---------------------------------------------------------------------------
+
 
 class WorkflowEngine:
     """Executes a workflow run as an async loop over the DAG.
@@ -92,37 +94,33 @@ class WorkflowEngine:
     # Public entry point
     # ------------------------------------------------------------------
 
-    async def execute_run(self, run_id: UUID) -> None:
-        from app.db.models import (
-            run_manager_instance as run_mgr,
-            step_run_manager_instance as sr_mgr,
-            workflow_manager_instance as wf_mgr,
-        )
+    async def execute_run(self, run_id: str) -> None:
+        from app.db.custom import wf_core
 
-        run = await run_mgr.load_by_id(str(run_id))
+        run = await wf_core.get_run(run_id)
         if run is None:
             raise EngineError(f"Run {run_id} not found")
 
-        workflow = await wf_mgr.load_by_id(str(run.workflow_id))
+        workflow = await wf_core.get_workflow(run.workflow_id)
         if workflow is None:
             raise EngineError(f"Workflow {run.workflow_id} not found")
 
         definition = workflow.definition
-        graph = WorkflowGraph(definition["nodes"], definition["edges"])
+        if not hasattr(definition, "nodes"):
+            raise EngineError(f"Workflow {workflow.id} has invalid definition format")
+        graph = WorkflowGraph(definition.nodes, definition.edges)  # type: ignore[union-attr]
         context: dict[str, Any] = dict(run.context) if run.context else {}
 
         if run.input:
-            context["input"] = run.input
+            context["input"] = dict(run.input) if hasattr(run.input, "keys") else run.input
 
         # Only emit RUN_STARTED if we are starting fresh (not resuming).
         is_resume = run.status in ("paused", "running")
         if not is_resume:
-            await run_mgr.update_item(str(run_id), status="running", started_at="now()")
-            await self._bus.emit(
-                run_id, EventType.RUN_STARTED, payload={"status": "running"}
-            )
+            await wf_core.update_run(run_id, {"status": "running", "started_at": datetime.now(UTC)})
+            await self._bus.emit(run_id, EventType.RUN_STARTED, payload={"status": "running"})
         else:
-            await run_mgr.update_item(str(run_id), status="running")
+            await wf_core.update_run(run_id, {"status": "running"})
 
         start_time = time.monotonic()
         active_tasks: list[asyncio.Task[Any]] = []
@@ -139,10 +137,10 @@ class WorkflowEngine:
                         raise RunTimeout(str(run_id), self._run_timeout)
 
                 # -- determine completed / skipped steps -------------------
-                existing_step_runs = await sr_mgr.filter_items(run_id=str(run_id))
+                existing_step_runs = await wf_core.get_step_runs({"run_id": str(run_id)})
                 done_ids: set[str] = set()
                 for sr in existing_step_runs:
-                    if sr.status in ("completed", "skipped"):
+                    if sr.status in ("completed", "skipped") and sr.step_id is not None:
                         done_ids.add(sr.step_id)
 
                 # -- find next batch of ready steps -----------------------
@@ -152,9 +150,7 @@ class WorkflowEngine:
 
                 # -- execute batch in parallel (with semaphore) -----------
                 active_tasks = [
-                    asyncio.create_task(
-                        self._guarded_execute_step(run_id, node, context, graph)
-                    )
+                    asyncio.create_task(self._guarded_execute_step(run_id, node, context, graph))
                     for node in ready_nodes
                 ]
 
@@ -162,7 +158,7 @@ class WorkflowEngine:
                 active_tasks.clear()
 
                 # -- process results --------------------------------------
-                for node, result in zip(ready_nodes, results):
+                for node, result in zip(ready_nodes, results, strict=False):
                     node_id = node["id"]
                     node_data = node.get("data", {})
                     on_error = node_data.get("on_error", "fail")
@@ -170,9 +166,7 @@ class WorkflowEngine:
                     # Pause (approval / external event)
                     if isinstance(result, PauseExecution):
                         duration_ms = int((time.monotonic() - start_time) * 1000)
-                        await run_mgr.update_item(
-                            str(run_id), status="paused", context=context,
-                        )
+                        await wf_core.update_run(run_id, {"status": "paused", "context": context})
                         await self._bus.emit(
                             run_id,
                             EventType.RUN_PAUSED,
@@ -198,13 +192,17 @@ class WorkflowEngine:
                     if isinstance(result, Exception):
                         if on_error == "skip":
                             step_type = graph.get_node_type(node_id)
-                            await sr_mgr.create_item(
-                                run_id=str(run_id),
-                                step_id=node_id,
-                                step_type=step_type,
-                                status="skipped",
-                                error=str(result),
-                                attempt=1,
+                            await wf_core.create_step_run(
+                                {
+                                    "run_id": str(run_id),
+                                    "step_id": node_id,
+                                    "step_type": step_type,
+                                    "status": "skipped",
+                                    "input": {},
+                                    "output": {},
+                                    "error": str(result),
+                                    "attempt": 1,
+                                }
                             )
                             await self._bus.emit(
                                 run_id,
@@ -221,18 +219,20 @@ class WorkflowEngine:
 
                         if on_error == "continue":
                             context[node_id] = {"_error": str(result)}
-                            await run_mgr.update_item(str(run_id), context=context)
+                            await wf_core.update_run(run_id, {"context": context})
                             done_ids.add(node_id)
                             continue
 
                         # Default: fail the run
                         duration_ms = int((time.monotonic() - start_time) * 1000)
-                        await run_mgr.update_item(
-                            str(run_id),
-                            status="failed",
-                            error=str(result),
-                            completed_at="now()",
-                            context=context,
+                        await wf_core.update_run(
+                            run_id,
+                            {
+                                "status": "failed",
+                                "error": str(result),
+                                "completed_at": datetime.now(UTC),
+                                "context": context,
+                            },
                         )
                         await self._bus.emit(
                             run_id,
@@ -249,7 +249,7 @@ class WorkflowEngine:
                     # Success — merge output into context
                     if isinstance(result, dict):
                         context[node_id] = result
-                        await run_mgr.update_item(str(run_id), context=context)
+                        await wf_core.update_run(run_id, {"context": context})
                         await self._bus.emit(
                             run_id,
                             EventType.CONTEXT_UPDATED,
@@ -262,11 +262,13 @@ class WorkflowEngine:
 
             # -- all steps done --------------------------------------------
             duration_ms = int((time.monotonic() - start_time) * 1000)
-            await run_mgr.update_item(
-                str(run_id),
-                status="completed",
-                completed_at="now()",
-                context=context,
+            await wf_core.update_run(
+                run_id,
+                {
+                    "status": "completed",
+                    "completed_at": datetime.now(UTC),
+                    "context": context,
+                },
             )
             await self._bus.emit(
                 run_id,
@@ -277,12 +279,14 @@ class WorkflowEngine:
         except RunTimeout as exc:
             duration_ms = int((time.monotonic() - start_time) * 1000)
             logger.error("Run timed out", run_id=str(run_id), timeout=self._run_timeout)
-            await run_mgr.update_item(
-                str(run_id),
-                status="failed",
-                error=str(exc),
-                completed_at="now()",
-                context=context,
+            await wf_core.update_run(
+                run_id,
+                {
+                    "status": "failed",
+                    "error": str(exc),
+                    "completed_at": datetime.now(UTC),
+                    "context": context,
+                },
             )
             await self._bus.emit(
                 run_id,
@@ -295,19 +299,19 @@ class WorkflowEngine:
             )
 
         except RunCancelled:
-            await self._bus.emit(
-                run_id, EventType.RUN_CANCELLED, payload={"status": "cancelled"}
-            )
+            await self._bus.emit(run_id, EventType.RUN_CANCELLED, payload={"status": "cancelled"})
 
         except Exception as exc:
             duration_ms = int((time.monotonic() - start_time) * 1000)
             logger.exception("Unexpected engine failure", run_id=str(run_id))
-            await run_mgr.update_item(
-                str(run_id),
-                status="failed",
-                error=str(exc),
-                completed_at="now()",
-                context=context,
+            await wf_core.update_run(
+                run_id,
+                {
+                    "status": "failed",
+                    "error": str(exc),
+                    "completed_at": datetime.now(UTC),
+                    "context": context,
+                },
             )
             await self._bus.emit(
                 run_id,
@@ -330,7 +334,7 @@ class WorkflowEngine:
 
     async def _guarded_execute_step(
         self,
-        run_id: UUID,
+        run_id: str,
         node: dict[str, Any],
         context: dict[str, Any],
         graph: WorkflowGraph,
@@ -344,12 +348,12 @@ class WorkflowEngine:
 
     async def _execute_step(
         self,
-        run_id: UUID,
+        run_id: str,
         node: dict[str, Any],
         context: dict[str, Any],
         graph: WorkflowGraph,
     ) -> dict[str, Any]:
-        from app.db.models import step_run_manager_instance as sr_mgr
+        from app.db.custom import wf_core
 
         node_id = node["id"]
         step_type = graph.get_node_type(node_id)
@@ -363,15 +367,11 @@ class WorkflowEngine:
 
         # -- Pause-type steps (approval / wait_for_event) ------------------
         if step_type in _PAUSE_STEP_TYPES:
-            return await self._handle_pause_step(
-                run_id, node_id, step_type, step_label, config
-            )
+            return await self._handle_pause_step(run_id, node_id, step_type, step_label, config)
 
         # -- for_each loop -------------------------------------------------
         if step_type == "for_each":
-            return await self._execute_for_each(
-                run_id, node_id, config, context, graph
-            )
+            return await self._execute_for_each(run_id, node_id, config, context, graph)
 
         # -- Regular handler execution -------------------------------------
         handler = STEP_REGISTRY.get(step_type)
@@ -387,15 +387,20 @@ class WorkflowEngine:
         last_error: Exception | None = None
 
         for attempt in range(1, max_attempts + 1):
-            await sr_mgr.create_item(
-                run_id=str(run_id),
-                step_id=node_id,
-                step_type=step_type,
-                status="running",
-                input=resolved_config,
-                attempt=attempt,
-                started_at="now()",
+            step_run = await wf_core.create_step_run(
+                {
+                    "run_id": str(run_id),
+                    "step_id": node_id,
+                    "step_type": step_type,
+                    "status": "running",
+                    "input": resolved_config,
+                    "output": {},
+                    "attempt": attempt,
+                    "started_at": datetime.now(UTC),
+                }
             )
+            step_run_id = str(step_run.id)
+
             await self._bus.emit(
                 run_id,
                 EventType.STEP_STARTED,
@@ -416,24 +421,17 @@ class WorkflowEngine:
                 else:
                     output = await coro
 
-                # Handlers that raise PauseExecution (e.g. wait_for_event)
-                # will be caught by the outer exception handler — but some
-                # may want to return normally, so we handle both paths.
-
                 if not isinstance(output, dict):
                     output = {"result": output}
 
                 step_duration = int((time.monotonic() - step_start) * 1000)
-                await sr_mgr.update_item(
-                    None,
-                    _filter={
-                        "run_id": str(run_id),
-                        "step_id": node_id,
-                        "attempt": attempt,
+                await wf_core.update_step_run(
+                    step_run_id,
+                    {
+                        "status": "completed",
+                        "output": output,
+                        "completed_at": datetime.now(UTC),
                     },
-                    status="completed",
-                    output=output,
-                    completed_at="now()",
                 )
                 await self._bus.emit(
                     run_id,
@@ -450,39 +448,32 @@ class WorkflowEngine:
                 return output
 
             except PauseExecution as pause:
-                # Handler raised PauseExecution (e.g. wait_for_event)
                 pause.step_id = node_id
                 raise
 
             except NonRetriableError:
                 raise
 
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 last_error = StepTimeout(node_id, timeout_seconds or 0)
-                await sr_mgr.update_item(
-                    None,
-                    _filter={
-                        "run_id": str(run_id),
-                        "step_id": node_id,
-                        "attempt": attempt,
+                await wf_core.update_step_run(
+                    step_run_id,
+                    {
+                        "status": "failed",
+                        "error": str(last_error),
+                        "completed_at": datetime.now(UTC),
                     },
-                    status="failed",
-                    error=str(last_error),
-                    completed_at="now()",
                 )
 
             except Exception as exc:
                 last_error = exc
-                await sr_mgr.update_item(
-                    None,
-                    _filter={
-                        "run_id": str(run_id),
-                        "step_id": node_id,
-                        "attempt": attempt,
+                await wf_core.update_step_run(
+                    step_run_id,
+                    {
+                        "status": "failed",
+                        "error": str(exc),
+                        "completed_at": datetime.now(UTC),
                     },
-                    status="failed",
-                    error=str(exc),
-                    completed_at="now()",
                 )
 
             # Retry logic
@@ -526,12 +517,12 @@ class WorkflowEngine:
 
     async def _evaluate_condition(
         self,
-        run_id: UUID,
+        run_id: str,
         node_id: str,
         context: dict[str, Any],
         graph: WorkflowGraph,
     ) -> dict[str, Any]:
-        from app.db.models import step_run_manager_instance as sr_mgr
+        from app.db.custom import wf_core
 
         node_data = graph.get_node_data(node_id)
         config = node_data.get("config", {})
@@ -541,15 +532,20 @@ class WorkflowEngine:
         if not isinstance(resolved_expr, str):
             resolved_expr = str(resolved_expr)
 
-        await sr_mgr.create_item(
-            run_id=str(run_id),
-            step_id=node_id,
-            step_type="condition",
-            status="running",
-            input={"expression": resolved_expr},
-            attempt=1,
-            started_at="now()",
+        step_run = await wf_core.create_step_run(
+            {
+                "run_id": str(run_id),
+                "step_id": node_id,
+                "step_type": "condition",
+                "status": "running",
+                "input": {"expression": resolved_expr},
+                "output": {},
+                "attempt": 1,
+                "started_at": datetime.now(UTC),
+            }
         )
+        step_run_id = str(step_run.id)
+
         await self._bus.emit(
             run_id,
             EventType.STEP_STARTED,
@@ -566,12 +562,13 @@ class WorkflowEngine:
         result = bool(safe_eval(resolved_expr, context))
         step_duration = int((time.monotonic() - step_start) * 1000)
 
-        await sr_mgr.update_item(
-            None,
-            _filter={"run_id": str(run_id), "step_id": node_id, "attempt": 1},
-            status="completed",
-            output={"result": result, "branch": "true" if result else "false"},
-            completed_at="now()",
+        await wf_core.update_step_run(
+            step_run_id,
+            {
+                "status": "completed",
+                "output": {"result": result, "branch": "true" if result else "false"},
+                "completed_at": datetime.now(UTC),
+            },
         )
         await self._bus.emit(
             run_id,
@@ -592,12 +589,16 @@ class WorkflowEngine:
 
         for skip_id in skip_ids:
             skip_type = graph.get_node_type(skip_id)
-            await sr_mgr.create_item(
-                run_id=str(run_id),
-                step_id=skip_id,
-                step_type=skip_type,
-                status="skipped",
-                attempt=1,
+            await wf_core.create_step_run(
+                {
+                    "run_id": str(run_id),
+                    "step_id": skip_id,
+                    "step_type": skip_type,
+                    "status": "skipped",
+                    "input": {},
+                    "output": {},
+                    "attempt": 1,
+                }
             )
             await self._bus.emit(
                 run_id,
@@ -618,25 +619,28 @@ class WorkflowEngine:
 
     async def _handle_pause_step(
         self,
-        run_id: UUID,
+        run_id: str,
         node_id: str,
         step_type: str,
         step_label: str,
         config: dict[str, Any],
     ) -> dict[str, Any]:
-        from app.db.models import step_run_manager_instance as sr_mgr
+        from app.db.custom import wf_core
 
         waiting_for = "approval" if step_type == "wait_for_approval" else "event"
         reason = config.get("prompt", config.get("event_name", "Waiting"))
 
-        await sr_mgr.create_item(
-            run_id=str(run_id),
-            step_id=node_id,
-            step_type=step_type,
-            status="waiting",
-            input=config,
-            attempt=1,
-            started_at="now()",
+        await wf_core.create_step_run(
+            {
+                "run_id": str(run_id),
+                "step_id": node_id,
+                "step_type": step_type,
+                "status": "waiting",
+                "input": config,
+                "output": {},
+                "attempt": 1,
+                "started_at": datetime.now(UTC),
+            }
         )
         await self._bus.emit(
             run_id,
@@ -662,13 +666,13 @@ class WorkflowEngine:
 
     async def _execute_for_each(
         self,
-        run_id: UUID,
+        run_id: str,
         node_id: str,
         config: dict[str, Any],
         context: dict[str, Any],
         graph: WorkflowGraph,
     ) -> dict[str, Any]:
-        from app.db.models import step_run_manager_instance as sr_mgr
+        from app.db.custom import wf_core
 
         node_data = graph.get_node_data(node_id)
         step_label = node_data.get("label", node_id)
@@ -678,19 +682,23 @@ class WorkflowEngine:
         if not isinstance(items, list):
             raise EngineError(f"for_each step {node_id}: 'items' must be a list")
 
-        # The sub-step handler to run per item (if specified)
         sub_handler_type = resolved_config.get("handler", resolved_config.get("step_type"))
         sub_config_template = resolved_config.get("item_config", {})
 
-        await sr_mgr.create_item(
-            run_id=str(run_id),
-            step_id=node_id,
-            step_type="for_each",
-            status="running",
-            input={"item_count": len(items)},
-            attempt=1,
-            started_at="now()",
+        step_run = await wf_core.create_step_run(
+            {
+                "run_id": str(run_id),
+                "step_id": node_id,
+                "step_type": "for_each",
+                "status": "running",
+                "input": {"item_count": len(items)},
+                "output": {},
+                "attempt": 1,
+                "started_at": datetime.now(UTC),
+            }
         )
+        step_run_id = str(step_run.id)
+
         await self._bus.emit(
             run_id,
             EventType.STEP_STARTED,
@@ -718,18 +726,16 @@ class WorkflowEngine:
                     return await handler.execute(item_config, item_context)
 
             tasks = [_run_item(i, item) for i, item in enumerate(items)]
-            results = await asyncio.gather(*tasks, return_exceptions=True)
+            raw_results = await asyncio.gather(*tasks, return_exceptions=True)
 
-            # Convert exceptions to error dicts
             processed: list[Any] = []
-            for i, r in enumerate(results):
+            for i, r in enumerate(raw_results):
                 if isinstance(r, Exception):
                     processed.append({"_error": str(r), "_index": i})
                 else:
                     processed.append(r)
             results = processed
         else:
-            # No sub-handler — just pass items through
             results = list(items)
 
         output = {
@@ -739,12 +745,13 @@ class WorkflowEngine:
         }
 
         step_duration = int((time.monotonic() - step_start) * 1000)
-        await sr_mgr.update_item(
-            None,
-            _filter={"run_id": str(run_id), "step_id": node_id, "attempt": 1},
-            status="completed",
-            output=output,
-            completed_at="now()",
+        await wf_core.update_step_run(
+            step_run_id,
+            {
+                "status": "completed",
+                "output": output,
+                "completed_at": datetime.now(UTC),
+            },
         )
         await self._bus.emit(
             run_id,
@@ -767,12 +774,10 @@ class WorkflowEngine:
     # Cancellation check
     # ------------------------------------------------------------------
 
-    async def _check_cancelled(
-        self, run_id: UUID, active_tasks: list[asyncio.Task[Any]]
-    ) -> None:
-        from app.db.models import run_manager_instance as run_mgr
+    async def _check_cancelled(self, run_id: str, active_tasks: list[asyncio.Task[Any]]) -> None:
+        from app.db.custom import wf_core
 
-        fresh_run = await run_mgr.load_by_id(str(run_id))
+        fresh_run = await wf_core.get_run(run_id)
         if fresh_run and fresh_run.status == "cancelled":
             for task in active_tasks:
                 task.cancel()

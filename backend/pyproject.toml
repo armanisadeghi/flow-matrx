@@ -21,7 +21,7 @@ dependencies = [
     "jinja2>=3.1.4",
     "orjson>=3.11.7",
     # --- Matrx ecosystem ---
-    "matrx-utils>=1.0.9",
+    "matrx-utils>=1.0.11",
     "matrx-orm>=2.0.39",
     "pytest>=8.3.0",
 ]

@@ -4,11 +4,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from matrx_orm import BaseManager, BaseDTO, ModelView
-from matrx_utils import vcprint
+from matrx_orm import BaseDTO, BaseManager, ModelView
 
-from db.models import ResourceShare
-
+from ..models import ResourceShare
 
 # ---------------------------------------------------------------------------
 # ModelView (new) — opt-in projection layer.
@@ -17,6 +15,7 @@ from db.models import ResourceShare
 # or pass view_class=ResourceShareView to super().__init__().
 # When active, the DTO path below is skipped automatically.
 # ---------------------------------------------------------------------------
+
 
 class ResourceShareView(ModelView[ResourceShare]):
     """
@@ -54,12 +53,13 @@ class ResourceShareView(ModelView[ResourceShare]):
 # manager subclass and this DTO will be bypassed automatically.
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class ResourceShareDTO(BaseDTO[ResourceShare]):
     id: str
 
     async def _initialize_dto(self, model: ResourceShare) -> None:
-        '''Override to populate DTO fields from the model.'''
+        """Override to populate DTO fields from the model."""
         self.id = str(model.id)
         await self._process_core_data(model)
         await self._process_metadata(model)
@@ -67,23 +67,23 @@ class ResourceShareDTO(BaseDTO[ResourceShare]):
         self.initialized = True
 
     async def _process_core_data(self, model: ResourceShare) -> None:
-        '''Process core data from the model item.'''
+        """Process core data from the model item."""
         pass
 
     async def _process_metadata(self, model: ResourceShare) -> None:
-        '''Process metadata from the model item.'''
+        """Process metadata from the model item."""
         pass
 
     async def _initial_validation(self, model: ResourceShare) -> None:
-        '''Validate fields from the model item.'''
+        """Validate fields from the model item."""
         pass
 
     async def _final_validation(self) -> bool:
-        '''Final validation of the model item.'''
+        """Final validation of the model item."""
         return True
 
     async def get_validated_dict(self) -> dict[str, Any]:
-        '''Get the validated dictionary.'''
+        """Get the validated dictionary."""
         await self._final_validation()
         return self.to_dict()
 
@@ -94,6 +94,7 @@ class ResourceShareDTO(BaseDTO[ResourceShare]):
 #   1. Quick: set view_class = ResourceShareView  (replaces DTO automatically)
 #   2. Explicit: super().__init__(ResourceShare, view_class=ResourceShareView)
 # ---------------------------------------------------------------------------
+
 
 class ResourceShareBase(BaseManager[ResourceShare]):
     view_class = None  # DTO is used by default; set to ResourceShareView to opt in
@@ -137,20 +138,22 @@ class ResourceShareBase(BaseManager[ResourceShare]):
     async def filter_resource_shares(self, **kwargs: Any) -> list[ResourceShare]:
         return await self.filter_items(**kwargs)
 
-    async def get_or_create_resource_share(self, defaults: dict[str, Any] | None = None, **kwargs: Any) -> ResourceShare | None:
+    async def get_or_create_resource_share(
+        self, defaults: dict[str, Any] | None = None, **kwargs: Any
+    ) -> ResourceShare | None:
         return await self.get_or_create(defaults, **kwargs)
 
     async def get_resource_share_with_org(self, id: Any) -> tuple[Any, Any]:
-        return await self.get_item_with_related(id, 'org')
+        return await self.get_item_with_related(id, "org")
 
     async def get_resource_shares_with_org(self) -> list[Any]:
-        return await self.get_items_with_related('org')
+        return await self.get_items_with_related("org")
 
     async def get_resource_share_with_user_profile(self, id: Any) -> tuple[Any, Any]:
-        return await self.get_item_with_related(id, 'user_profile')
+        return await self.get_item_with_related(id, "user_profile")
 
     async def get_resource_shares_with_user_profile(self) -> list[Any]:
-        return await self.get_items_with_related('user_profile')
+        return await self.get_items_with_related("user_profile")
 
     async def load_resource_shares_by_org_id(self, org_id: Any) -> list[Any]:
         return await self.load_items(org_id=org_id)
@@ -158,16 +161,24 @@ class ResourceShareBase(BaseManager[ResourceShare]):
     async def filter_resource_shares_by_org_id(self, org_id: Any) -> list[Any]:
         return await self.filter_items(org_id=org_id)
 
-    async def load_resource_shares_by_shared_with_org_id(self, shared_with_org_id: Any) -> list[Any]:
+    async def load_resource_shares_by_shared_with_org_id(
+        self, shared_with_org_id: Any
+    ) -> list[Any]:
         return await self.load_items(shared_with_org_id=shared_with_org_id)
 
-    async def filter_resource_shares_by_shared_with_org_id(self, shared_with_org_id: Any) -> list[Any]:
+    async def filter_resource_shares_by_shared_with_org_id(
+        self, shared_with_org_id: Any
+    ) -> list[Any]:
         return await self.filter_items(shared_with_org_id=shared_with_org_id)
 
-    async def load_resource_shares_by_shared_with_user_id(self, shared_with_user_id: Any) -> list[Any]:
+    async def load_resource_shares_by_shared_with_user_id(
+        self, shared_with_user_id: Any
+    ) -> list[Any]:
         return await self.load_items(shared_with_user_id=shared_with_user_id)
 
-    async def filter_resource_shares_by_shared_with_user_id(self, shared_with_user_id: Any) -> list[Any]:
+    async def filter_resource_shares_by_shared_with_user_id(
+        self, shared_with_user_id: Any
+    ) -> list[Any]:
         return await self.filter_items(shared_with_user_id=shared_with_user_id)
 
     async def load_resource_shares_by_created_by(self, created_by: Any) -> list[Any]:
@@ -190,7 +201,6 @@ class ResourceShareBase(BaseManager[ResourceShare]):
         return self.active_item_ids
 
 
-
 class ResourceShareManager(ResourceShareBase):
     _instance: ResourceShareManager | None = None
 
@@ -204,5 +214,6 @@ class ResourceShareManager(ResourceShareBase):
 
     async def _initialize_runtime_data(self, item: ResourceShare) -> None:
         pass
+
 
 resource_share_manager_instance = ResourceShareManager()

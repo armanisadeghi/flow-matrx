@@ -2,10 +2,8 @@ from __future__ import annotations
 
 from datetime import datetime
 from typing import Any
-from uuid import UUID
 
 from pydantic import BaseModel, Field
-
 
 # -- Workflow schemas ----------------------------------------------------------
 
@@ -24,14 +22,14 @@ class WorkflowUpdate(BaseModel):
 
 
 class WorkflowResponse(BaseModel):
-    id: UUID
+    id: str
     name: str
     description: str
     version: int
     status: str
     definition: dict[str, Any]
     input_schema: dict[str, Any] | None
-    created_by: UUID | None
+    created_by: str | None
     created_at: datetime
     updated_at: datetime
 
@@ -44,15 +42,15 @@ class TriggerRunRequest(BaseModel):
 
 
 class RunResponse(BaseModel):
-    id: UUID
-    workflow_id: UUID
+    id: str
+    workflow_id: str
     status: str
     trigger_type: str
     input: dict[str, Any]
     context: dict[str, Any]
     error: str | None
     idempotency_key: str | None
-    created_by: UUID | None
+    created_by: str | None
     started_at: datetime | None
     completed_at: datetime | None
     created_at: datetime
@@ -66,8 +64,8 @@ class ResumeRunRequest(BaseModel):
 # -- StepRun schemas -----------------------------------------------------------
 
 class StepRunResponse(BaseModel):
-    id: UUID
-    run_id: UUID
+    id: str
+    run_id: str
     step_id: str
     step_type: str
     status: str
@@ -83,8 +81,8 @@ class StepRunResponse(BaseModel):
 # -- RunEvent schemas ----------------------------------------------------------
 
 class RunEventResponse(BaseModel):
-    id: UUID
-    run_id: UUID
+    id: str
+    run_id: str
     step_id: str | None
     event_type: str
     payload: dict[str, Any]

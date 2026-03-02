@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
-from app.db.schemas import StepTypeInfo
 from app.steps.registry import STEP_CATALOG, STEP_REGISTRY
+from app.types.schemas import StepTypeInfo
 
 router = APIRouter()
 

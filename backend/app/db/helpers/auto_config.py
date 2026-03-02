@@ -1,0 +1,173 @@
+# File: db/helpers/auto_config.py
+org_auto_config = {
+    "models_module_path": "db.models",
+    "model_pascal": "Org",
+    "model_name": "org",
+    "model_name_plural": "orgs",
+    "model_name_snake": "org",
+    "relations": [
+        "org_member",
+        "wf_workflow",
+        "wf_run",
+        "wf_step_run",
+        "wf_run_event",
+        "resource_share",
+    ],
+    "filter_fields": [],
+    "include_core_relations": True,
+    "include_active_relations": False,
+    "include_filter_fields": True,
+    "include_active_methods": False,
+    "include_or_not_methods": False,
+    "include_to_dict_methods": False,
+    "include_to_dict_relations": False,
+    "m2m_relations": None,
+    "view_prefetch": [],
+}
+
+
+user_profile_auto_config = {
+    "models_module_path": "db.models",
+    "model_pascal": "UserProfile",
+    "model_name": "user_profile",
+    "model_name_plural": "user_profiles",
+    "model_name_snake": "user_profile",
+    "relations": [
+        "org_member",
+        "wf_workflow",
+        "wf_run",
+        "wf_step_run",
+        "wf_run_event",
+        "resource_share",
+    ],
+    "filter_fields": [],
+    "include_core_relations": True,
+    "include_active_relations": False,
+    "include_filter_fields": True,
+    "include_active_methods": False,
+    "include_or_not_methods": False,
+    "include_to_dict_methods": False,
+    "include_to_dict_relations": False,
+    "m2m_relations": None,
+    "view_prefetch": [],
+}
+
+
+org_member_auto_config = {
+    "models_module_path": "db.models",
+    "model_pascal": "OrgMember",
+    "model_name": "org_member",
+    "model_name_plural": "org_members",
+    "model_name_snake": "org_member",
+    "relations": ["org", "user_profile"],
+    "filter_fields": ["org_id", "user_id"],
+    "include_core_relations": True,
+    "include_active_relations": False,
+    "include_filter_fields": True,
+    "include_active_methods": False,
+    "include_or_not_methods": False,
+    "include_to_dict_methods": False,
+    "include_to_dict_relations": False,
+    "m2m_relations": None,
+    "view_prefetch": [],
+}
+
+
+resource_share_auto_config = {
+    "models_module_path": "db.models",
+    "model_pascal": "ResourceShare",
+    "model_name": "resource_share",
+    "model_name_plural": "resource_shares",
+    "model_name_snake": "resource_share",
+    "relations": ["org", "user_profile"],
+    "filter_fields": ["org_id", "shared_with_org_id", "shared_with_user_id", "created_by"],
+    "include_core_relations": True,
+    "include_active_relations": False,
+    "include_filter_fields": True,
+    "include_active_methods": False,
+    "include_or_not_methods": False,
+    "include_to_dict_methods": False,
+    "include_to_dict_relations": False,
+    "m2m_relations": None,
+    "view_prefetch": [],
+}
+
+
+wf_workflow_auto_config = {
+    "models_module_path": "db.models",
+    "model_pascal": "WfWorkflow",
+    "model_name": "wf_workflow",
+    "model_name_plural": "wf_workflows",
+    "model_name_snake": "wf_workflow",
+    "relations": ["org", "user_profile", "wf_run"],
+    "filter_fields": ["org_id", "user_id"],
+    "include_core_relations": True,
+    "include_active_relations": False,
+    "include_filter_fields": True,
+    "include_active_methods": False,
+    "include_or_not_methods": False,
+    "include_to_dict_methods": False,
+    "include_to_dict_relations": False,
+    "m2m_relations": None,
+    "view_prefetch": [],
+}
+
+
+wf_run_auto_config = {
+    "models_module_path": "db.models",
+    "model_pascal": "WfRun",
+    "model_name": "wf_run",
+    "model_name_plural": "wf_runs",
+    "model_name_snake": "wf_run",
+    "relations": ["org", "user_profile", "wf_workflow", "wf_step_run", "wf_run_event"],
+    "filter_fields": ["org_id", "user_id", "workflow_id"],
+    "include_core_relations": True,
+    "include_active_relations": False,
+    "include_filter_fields": True,
+    "include_active_methods": False,
+    "include_or_not_methods": False,
+    "include_to_dict_methods": False,
+    "include_to_dict_relations": False,
+    "m2m_relations": None,
+    "view_prefetch": [],
+}
+
+
+wf_run_event_auto_config = {
+    "models_module_path": "db.models",
+    "model_pascal": "WfRunEvent",
+    "model_name": "wf_run_event",
+    "model_name_plural": "wf_run_events",
+    "model_name_snake": "wf_run_event",
+    "relations": ["org", "user_profile", "wf_run"],
+    "filter_fields": ["org_id", "user_id", "run_id"],
+    "include_core_relations": True,
+    "include_active_relations": False,
+    "include_filter_fields": True,
+    "include_active_methods": False,
+    "include_or_not_methods": False,
+    "include_to_dict_methods": False,
+    "include_to_dict_relations": False,
+    "m2m_relations": None,
+    "view_prefetch": [],
+}
+
+
+wf_step_run_auto_config = {
+    "models_module_path": "db.models",
+    "model_pascal": "WfStepRun",
+    "model_name": "wf_step_run",
+    "model_name_plural": "wf_step_runs",
+    "model_name_snake": "wf_step_run",
+    "relations": ["org", "user_profile", "wf_run"],
+    "filter_fields": ["org_id", "user_id", "run_id"],
+    "include_core_relations": True,
+    "include_active_relations": False,
+    "include_filter_fields": True,
+    "include_active_methods": False,
+    "include_or_not_methods": False,
+    "include_to_dict_methods": False,
+    "include_to_dict_relations": False,
+    "m2m_relations": None,
+    "view_prefetch": [],
+}

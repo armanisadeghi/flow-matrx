@@ -1,9 +1,9 @@
 from fastapi import APIRouter
 
-from app.api.workflows import router as workflows_router
+from app.api.catalog import router as catalog_router
 from app.api.runs import router as runs_router
 from app.api.triggers import router as triggers_router
-from app.api.catalog import router as catalog_router
+from app.api.workflows import router as workflows_router
 from app.api.ws import router as ws_router
 
 router = APIRouter()

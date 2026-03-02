@@ -1,30 +1,29 @@
 from __future__ import annotations
 
-from uuid import UUID
+from dataclasses import asdict, is_dataclass
 
 from fastapi import APIRouter, Header, HTTPException, status
 
-from app.db.schemas import (
-    ValidationResult,
-    WorkflowCreate,
-    WorkflowResponse,
-    WorkflowUpdate,
-)
-from app.db.queries.workflows import (
-    create_workflow,
-    delete_workflow,
-    get_workflow,
-    list_workflows,
-    update_workflow,
-)
-from app.validation.workflow import validate_workflow
+from app.db.custom import wf_core
+from app.types.schemas import ValidationResult, WorkflowCreate, WorkflowResponse, WorkflowUpdate
+from app.validation import validate_workflow
 
 router = APIRouter()
 
 
+def _definition_to_dict(definition: object) -> dict:
+    """Convert a WfWorkflowDefinition dataclass (or plain dict) to a plain dict."""
+    if is_dataclass(definition) and not isinstance(definition, type):
+        return asdict(definition)  # type: ignore[arg-type]
+    if isinstance(definition, dict):
+        return definition
+    return {}
+
+
 @router.get("/", response_model=list[WorkflowResponse])
 async def list_workflows_endpoint() -> list[WorkflowResponse]:
-    return await list_workflows()
+    user_id = "this-will-come-from-context-later"
+    return await wf_core.get_workflow_responses({"created_by": user_id})
 
 
 @router.post("/", response_model=WorkflowResponse, status_code=status.HTTP_201_CREATED)
@@ -32,20 +31,20 @@ async def create_workflow_endpoint(
     payload: WorkflowCreate,
     x_idempotency_key: str | None = Header(None),
 ) -> WorkflowResponse:
-    return await create_workflow(payload)
+    return await wf_core.create_workflow(**payload.model_dump(exclude_none=False))
 
 
 @router.get("/{workflow_id}", response_model=WorkflowResponse)
-async def get_workflow_endpoint(workflow_id: UUID) -> WorkflowResponse:
-    wf = await get_workflow(workflow_id)
-    if wf is None:
+async def get_workflow_endpoint(workflow_id: str) -> WorkflowResponse:
+    wf = await wf_core.get_workflow_response(str(workflow_id))
+    if not wf:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workflow not found")
     return wf
 
 
 @router.put("/{workflow_id}", response_model=WorkflowResponse)
-async def update_workflow_endpoint(workflow_id: UUID, payload: WorkflowUpdate) -> WorkflowResponse:
-    existing = await get_workflow(workflow_id)
+async def update_workflow_endpoint(workflow_id: str, payload: WorkflowUpdate) -> WorkflowResponse:
+    existing = await wf_core.get_workflow(str(workflow_id))
     if existing is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workflow not found")
     if existing.status == "published":
@@ -53,62 +52,69 @@ async def update_workflow_endpoint(workflow_id: UUID, payload: WorkflowUpdate) -
             status_code=status.HTTP_409_CONFLICT,
             detail="Published workflows are immutable. Duplicate to create a new draft.",
         )
-    result = await update_workflow(workflow_id, payload)
-    if result is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workflow not found")
-    return result
+    return await wf_core.update_workflow(str(workflow_id), **payload.model_dump(exclude_none=True))
 
 
 @router.delete("/{workflow_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_workflow_endpoint(workflow_id: UUID) -> None:
-    existing = await get_workflow(workflow_id)
-    if existing is None:
+async def delete_workflow_endpoint(workflow_id: str) -> None:
+    existing = await wf_core.get_workflow(str(workflow_id))
+    if not existing:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workflow not found")
     if existing.status == "published":
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Cannot delete published workflows")
-    await delete_workflow(workflow_id)
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="Cannot delete published workflows"
+        )
+    await wf_core.delete_workflow(str(workflow_id))
 
 
 @router.post("/{workflow_id}/publish", response_model=WorkflowResponse)
-async def publish_workflow_endpoint(workflow_id: UUID) -> WorkflowResponse:
-    from app.db.models import workflow_manager_instance as wf_mgr
-
-    existing = await get_workflow(workflow_id)
-    if existing is None:
+async def publish_workflow_endpoint(workflow_id: str) -> WorkflowResponse:
+    existing = await wf_core.get_workflow(str(workflow_id))
+    if not existing:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workflow not found")
 
-    errors = validate_workflow(existing.definition)
-    if errors:
+    definition_dict = _definition_to_dict(existing.definition)
+    validation = validate_workflow(definition_dict)
+    if not validation.valid:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail={"message": "Workflow validation failed", "errors": errors},
+            detail={"message": "Workflow validation failed", "errors": validation.errors},
         )
 
-    await wf_mgr.update_item(str(workflow_id), status="published")
-    result = await get_workflow(workflow_id)
-    if result is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workflow not found after publish")
+    await wf_core.update_workflow(str(workflow_id), status="published")
+    result = await wf_core.get_workflow_response(str(workflow_id))
+    if not result:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Workflow not found after publish"
+        )
     return result
 
 
 @router.post("/{workflow_id}/validate", response_model=ValidationResult)
-async def validate_workflow_endpoint(workflow_id: UUID) -> ValidationResult:
-    existing = await get_workflow(workflow_id)
-    if existing is None:
+async def validate_workflow_endpoint(workflow_id: str) -> ValidationResult:
+    existing = await wf_core.get_workflow(str(workflow_id))
+    if not existing:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workflow not found")
-    errors = validate_workflow(existing.definition)
-    return ValidationResult(valid=len(errors) == 0, errors=errors)
+    definition_dict = _definition_to_dict(existing.definition)
+    return validate_workflow(definition_dict)
 
 
-@router.post("/{workflow_id}/duplicate", response_model=WorkflowResponse, status_code=status.HTTP_201_CREATED)
-async def duplicate_workflow_endpoint(workflow_id: UUID) -> WorkflowResponse:
-    existing = await get_workflow(workflow_id)
-    if existing is None:
+@router.post(
+    "/{workflow_id}/duplicate", response_model=WorkflowResponse, status_code=status.HTTP_201_CREATED
+)
+async def duplicate_workflow_endpoint(workflow_id: str) -> WorkflowResponse:
+    existing = await wf_core.get_workflow(str(workflow_id))
+    if not existing:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workflow not found")
-    payload = WorkflowCreate(
+    definition_dict = _definition_to_dict(existing.definition)
+    input_schema_dict = (
+        asdict(existing.input_schema)
+        if is_dataclass(existing.input_schema) and not isinstance(existing.input_schema, type)
+        else existing.input_schema
+    )
+    return await wf_core.create_workflow(
         name=f"{existing.name} (copy)",
         description=existing.description,
-        definition=existing.definition,
-        input_schema=existing.input_schema,
+        definition=definition_dict,
+        input_schema=input_schema_dict,
     )
-    return await create_workflow(payload)

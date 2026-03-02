@@ -4,9 +4,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from matrx_orm import BaseDTO, BaseManager, ModelView
+from matrx_orm import BaseManager, BaseDTO, ModelView
+from matrx_utils import vcprint
 
 from ..models import WfRunEvent
+
 
 # ---------------------------------------------------------------------------
 # ModelView (new) — opt-in projection layer.
@@ -15,7 +17,6 @@ from ..models import WfRunEvent
 # or pass view_class=WfRunEventView to super().__init__().
 # When active, the DTO path below is skipped automatically.
 # ---------------------------------------------------------------------------
-
 
 class WfRunEventView(ModelView[WfRunEvent]):
     """
@@ -53,13 +54,12 @@ class WfRunEventView(ModelView[WfRunEvent]):
 # manager subclass and this DTO will be bypassed automatically.
 # ---------------------------------------------------------------------------
 
-
 @dataclass
 class WfRunEventDTO(BaseDTO[WfRunEvent]):
     id: str
 
     async def _initialize_dto(self, model: WfRunEvent) -> None:
-        """Override to populate DTO fields from the model."""
+        '''Override to populate DTO fields from the model.'''
         self.id = str(model.id)
         await self._process_core_data(model)
         await self._process_metadata(model)
@@ -67,23 +67,23 @@ class WfRunEventDTO(BaseDTO[WfRunEvent]):
         self.initialized = True
 
     async def _process_core_data(self, model: WfRunEvent) -> None:
-        """Process core data from the model item."""
+        '''Process core data from the model item.'''
         pass
 
     async def _process_metadata(self, model: WfRunEvent) -> None:
-        """Process metadata from the model item."""
+        '''Process metadata from the model item.'''
         pass
 
     async def _initial_validation(self, model: WfRunEvent) -> None:
-        """Validate fields from the model item."""
+        '''Validate fields from the model item.'''
         pass
 
     async def _final_validation(self) -> bool:
-        """Final validation of the model item."""
+        '''Final validation of the model item.'''
         return True
 
     async def get_validated_dict(self) -> dict[str, Any]:
-        """Get the validated dictionary."""
+        '''Get the validated dictionary.'''
         await self._final_validation()
         return self.to_dict()
 
@@ -94,7 +94,6 @@ class WfRunEventDTO(BaseDTO[WfRunEvent]):
 #   1. Quick: set view_class = WfRunEventView  (replaces DTO automatically)
 #   2. Explicit: super().__init__(WfRunEvent, view_class=WfRunEventView)
 # ---------------------------------------------------------------------------
-
 
 class WfRunEventBase(BaseManager[WfRunEvent]):
     view_class = None  # DTO is used by default; set to WfRunEventView to opt in
@@ -138,28 +137,26 @@ class WfRunEventBase(BaseManager[WfRunEvent]):
     async def filter_wf_run_events(self, **kwargs: Any) -> list[WfRunEvent]:
         return await self.filter_items(**kwargs)
 
-    async def get_or_create_wf_run_event(
-        self, defaults: dict[str, Any] | None = None, **kwargs: Any
-    ) -> WfRunEvent | None:
+    async def get_or_create_wf_run_event(self, defaults: dict[str, Any] | None = None, **kwargs: Any) -> WfRunEvent | None:
         return await self.get_or_create(defaults, **kwargs)
 
     async def get_wf_run_event_with_org(self, id: Any) -> tuple[Any, Any]:
-        return await self.get_item_with_related(id, "org")
+        return await self.get_item_with_related(id, 'org')
 
     async def get_wf_run_events_with_org(self) -> list[Any]:
-        return await self.get_items_with_related("org")
+        return await self.get_items_with_related('org')
 
     async def get_wf_run_event_with_user_profile(self, id: Any) -> tuple[Any, Any]:
-        return await self.get_item_with_related(id, "user_profile")
+        return await self.get_item_with_related(id, 'user_profile')
 
     async def get_wf_run_events_with_user_profile(self) -> list[Any]:
-        return await self.get_items_with_related("user_profile")
+        return await self.get_items_with_related('user_profile')
 
     async def get_wf_run_event_with_wf_run(self, id: Any) -> tuple[Any, Any]:
-        return await self.get_item_with_related(id, "wf_run")
+        return await self.get_item_with_related(id, 'wf_run')
 
     async def get_wf_run_events_with_wf_run(self) -> list[Any]:
-        return await self.get_items_with_related("wf_run")
+        return await self.get_items_with_related('wf_run')
 
     async def load_wf_run_events_by_org_id(self, org_id: Any) -> list[Any]:
         return await self.load_items(org_id=org_id)
@@ -193,6 +190,7 @@ class WfRunEventBase(BaseManager[WfRunEvent]):
         return self.active_item_ids
 
 
+
 class WfRunEventManager(WfRunEventBase):
     _instance: WfRunEventManager | None = None
 
@@ -206,6 +204,5 @@ class WfRunEventManager(WfRunEventBase):
 
     async def _initialize_runtime_data(self, item: WfRunEvent) -> None:
         pass
-
 
 wf_run_event_manager_instance = WfRunEventManager()

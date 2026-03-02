@@ -1,5 +1,5 @@
 {
-    "last_updated": "2026-03-01 22:58:57",
+    "last_updated": "2026-03-01 23:11:44",
     "table_count": 8,
     "view_count": 0,
     "tables_with_primary_key": 8,
@@ -7,11 +7,11 @@
     "no_primary_key_tables": [],
     "total_columns": 86,
     "unique_column_types": [
-        "uuid",
         "jsonb",
         "text",
-        "int4",
-        "timestamptz"
+        "uuid",
+        "timestamptz",
+        "int4"
     ],
     "most_common_column_types": {
         "uuid": 26,

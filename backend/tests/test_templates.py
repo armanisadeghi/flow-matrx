@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from app.engine.templates import resolve_templates, extract_template_refs
+from app.engine.templates import extract_template_refs, resolve_templates
 
 
 class TestResolveTemplates:

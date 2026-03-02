@@ -4,9 +4,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from matrx_orm import BaseDTO, BaseManager, ModelView
+from matrx_orm import BaseManager, BaseDTO, ModelView
+from matrx_utils import vcprint
 
 from ..models import UserProfile
+
 
 # ---------------------------------------------------------------------------
 # ModelView (new) — opt-in projection layer.
@@ -15,7 +17,6 @@ from ..models import UserProfile
 # or pass view_class=UserProfileView to super().__init__().
 # When active, the DTO path below is skipped automatically.
 # ---------------------------------------------------------------------------
-
 
 class UserProfileView(ModelView[UserProfile]):
     """
@@ -53,13 +54,12 @@ class UserProfileView(ModelView[UserProfile]):
 # manager subclass and this DTO will be bypassed automatically.
 # ---------------------------------------------------------------------------
 
-
 @dataclass
 class UserProfileDTO(BaseDTO[UserProfile]):
     id: str
 
     async def _initialize_dto(self, model: UserProfile) -> None:
-        """Override to populate DTO fields from the model."""
+        '''Override to populate DTO fields from the model.'''
         self.id = str(model.id)
         await self._process_core_data(model)
         await self._process_metadata(model)
@@ -67,23 +67,23 @@ class UserProfileDTO(BaseDTO[UserProfile]):
         self.initialized = True
 
     async def _process_core_data(self, model: UserProfile) -> None:
-        """Process core data from the model item."""
+        '''Process core data from the model item.'''
         pass
 
     async def _process_metadata(self, model: UserProfile) -> None:
-        """Process metadata from the model item."""
+        '''Process metadata from the model item.'''
         pass
 
     async def _initial_validation(self, model: UserProfile) -> None:
-        """Validate fields from the model item."""
+        '''Validate fields from the model item.'''
         pass
 
     async def _final_validation(self) -> bool:
-        """Final validation of the model item."""
+        '''Final validation of the model item.'''
         return True
 
     async def get_validated_dict(self) -> dict[str, Any]:
-        """Get the validated dictionary."""
+        '''Get the validated dictionary.'''
         await self._final_validation()
         return self.to_dict()
 
@@ -94,7 +94,6 @@ class UserProfileDTO(BaseDTO[UserProfile]):
 #   1. Quick: set view_class = UserProfileView  (replaces DTO automatically)
 #   2. Explicit: super().__init__(UserProfile, view_class=UserProfileView)
 # ---------------------------------------------------------------------------
-
 
 class UserProfileBase(BaseManager[UserProfile]):
     view_class = None  # DTO is used by default; set to UserProfileView to opt in
@@ -138,46 +137,44 @@ class UserProfileBase(BaseManager[UserProfile]):
     async def filter_user_profiles(self, **kwargs: Any) -> list[UserProfile]:
         return await self.filter_items(**kwargs)
 
-    async def get_or_create_user_profile(
-        self, defaults: dict[str, Any] | None = None, **kwargs: Any
-    ) -> UserProfile | None:
+    async def get_or_create_user_profile(self, defaults: dict[str, Any] | None = None, **kwargs: Any) -> UserProfile | None:
         return await self.get_or_create(defaults, **kwargs)
 
     async def get_user_profile_with_org_member(self, id: Any) -> tuple[Any, Any]:
-        return await self.get_item_with_related(id, "org_member")
+        return await self.get_item_with_related(id, 'org_member')
 
     async def get_user_profiles_with_org_member(self) -> list[Any]:
-        return await self.get_items_with_related("org_member")
+        return await self.get_items_with_related('org_member')
 
     async def get_user_profile_with_wf_workflow(self, id: Any) -> tuple[Any, Any]:
-        return await self.get_item_with_related(id, "wf_workflow")
+        return await self.get_item_with_related(id, 'wf_workflow')
 
     async def get_user_profiles_with_wf_workflow(self) -> list[Any]:
-        return await self.get_items_with_related("wf_workflow")
+        return await self.get_items_with_related('wf_workflow')
 
     async def get_user_profile_with_wf_run(self, id: Any) -> tuple[Any, Any]:
-        return await self.get_item_with_related(id, "wf_run")
+        return await self.get_item_with_related(id, 'wf_run')
 
     async def get_user_profiles_with_wf_run(self) -> list[Any]:
-        return await self.get_items_with_related("wf_run")
+        return await self.get_items_with_related('wf_run')
 
     async def get_user_profile_with_wf_step_run(self, id: Any) -> tuple[Any, Any]:
-        return await self.get_item_with_related(id, "wf_step_run")
+        return await self.get_item_with_related(id, 'wf_step_run')
 
     async def get_user_profiles_with_wf_step_run(self) -> list[Any]:
-        return await self.get_items_with_related("wf_step_run")
+        return await self.get_items_with_related('wf_step_run')
 
     async def get_user_profile_with_wf_run_event(self, id: Any) -> tuple[Any, Any]:
-        return await self.get_item_with_related(id, "wf_run_event")
+        return await self.get_item_with_related(id, 'wf_run_event')
 
     async def get_user_profiles_with_wf_run_event(self) -> list[Any]:
-        return await self.get_items_with_related("wf_run_event")
+        return await self.get_items_with_related('wf_run_event')
 
     async def get_user_profile_with_resource_share(self, id: Any) -> tuple[Any, Any]:
-        return await self.get_item_with_related(id, "resource_share")
+        return await self.get_item_with_related(id, 'resource_share')
 
     async def get_user_profiles_with_resource_share(self) -> list[Any]:
-        return await self.get_items_with_related("resource_share")
+        return await self.get_items_with_related('resource_share')
 
     async def load_user_profiles_by_ids(self, ids: list[Any]) -> list[Any]:
         return await self.load_items_by_ids(ids)
@@ -193,6 +190,7 @@ class UserProfileBase(BaseManager[UserProfile]):
         return self.active_item_ids
 
 
+
 class UserProfileManager(UserProfileBase):
     _instance: UserProfileManager | None = None
 
@@ -206,6 +204,5 @@ class UserProfileManager(UserProfileBase):
 
     async def _initialize_runtime_data(self, item: UserProfile) -> None:
         pass
-
 
 user_profile_manager_instance = UserProfileManager()

@@ -24,12 +24,12 @@ class WorkflowUpdate(BaseModel):
 class WorkflowResponse(BaseModel):
     id: str
     name: str
-    description: str
+    description: str = ""
     version: int
     status: str
     definition: dict[str, Any]
-    input_schema: dict[str, Any] | None
-    created_by: str | None
+    input_schema: dict[str, Any] | None = None
+    user_id: str
     created_at: datetime
     updated_at: datetime
 
@@ -43,16 +43,17 @@ class TriggerRunRequest(BaseModel):
 
 class RunResponse(BaseModel):
     id: str
+    org_id: str
+    user_id: str
     workflow_id: str
     status: str
     trigger_type: str
-    input: dict[str, Any]
-    context: dict[str, Any]
-    error: str | None
-    idempotency_key: str | None
-    created_by: str | None
-    started_at: datetime | None
-    completed_at: datetime | None
+    input: dict[str, Any] = Field(default_factory=dict)
+    context: dict[str, Any] = Field(default_factory=dict)
+    error: str | None = None
+    idempotency_key: str | None = None
+    started_at: datetime | None = None
+    completed_at: datetime | None = None
     created_at: datetime
 
 
@@ -65,16 +66,18 @@ class ResumeRunRequest(BaseModel):
 
 class StepRunResponse(BaseModel):
     id: str
+    org_id: str
+    user_id: str
     run_id: str
     step_id: str
     step_type: str
     status: str
-    input: dict[str, Any]
-    output: dict[str, Any]
-    error: str | None
+    input: dict[str, Any] = Field(default_factory=dict)
+    output: dict[str, Any] = Field(default_factory=dict)
+    error: str | None = None
     attempt: int
-    started_at: datetime | None
-    completed_at: datetime | None
+    started_at: datetime | None = None
+    completed_at: datetime | None = None
     created_at: datetime
 
 
@@ -82,10 +85,12 @@ class StepRunResponse(BaseModel):
 
 class RunEventResponse(BaseModel):
     id: str
+    org_id: str
+    user_id: str
     run_id: str
-    step_id: str | None
+    step_id: str | None = None
     event_type: str
-    payload: dict[str, Any]
+    payload: dict[str, Any] = Field(default_factory=dict)
     created_at: datetime
 
 

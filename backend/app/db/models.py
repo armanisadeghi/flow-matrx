@@ -1,35 +1,19 @@
 # File: db/models.py
-# AUTO-GENERATED — do not edit directly.
-# Edit db/jsonb_types.py to customize JSONB field shapes.
-# Edit db/fields.py to customize JSONB field behaviour.
-from dataclasses import dataclass
-from typing import ClassVar
-
 from matrx_orm import (
-    BaseDTO,
-    BaseManager,
     CharField,
     DateTimeField,
     ForeignKey,
     IntegerField,
+    JSONBField,
     Model,
     TextField,
     UUIDField,
     model_registry,
+    BaseDTO,
+    BaseManager,
 )
-
-from .fields import TypedJSONBField
-from .jsonb_types import (
-    OrgMetadata,
-    UserProfileMetadata,
-    WfRunContext,
-    WfRunEventPayload,
-    WfRunInput,
-    WfStepRunInput,
-    WfStepRunOutput,
-    WfWorkflowDefinition,
-    WfWorkflowInputSchema,
-)
+from dataclasses import dataclass
+from typing import ClassVar
 
 
 class Users(Model):
@@ -46,7 +30,7 @@ class Org(Model):
     name = TextField(null=False)
     slug = TextField(null=False)
     logo_url = TextField()
-    metadata = TypedJSONBField(OrgMetadata, null=False)
+    metadata = JSONBField(null=False, default={})
     created_at = DateTimeField(null=False)
     updated_at = DateTimeField(null=False)
     deleted_at = DateTimeField()
@@ -96,7 +80,7 @@ class UserProfile(Model):
     display_name = TextField()
     email = TextField()
     avatar_url = TextField()
-    metadata = TypedJSONBField[UserProfileMetadata](UserProfileMetadata, null=False)
+    metadata = JSONBField(null=False, default={})
     created_at = DateTimeField(null=False)
     updated_at = DateTimeField(null=False)
     deleted_at = DateTimeField()
@@ -184,8 +168,8 @@ class WfWorkflow(Model):
     description = TextField(null=False)
     version = IntegerField(null=False, default=1)
     status = TextField(null=False, default="draft")
-    definition = TypedJSONBField(WfWorkflowDefinition, null=False)
-    input_schema = TypedJSONBField(WfWorkflowInputSchema)
+    definition = JSONBField(null=False, default={"edges": [], "nodes": []})
+    input_schema = JSONBField()
     created_at = DateTimeField(null=False)
     updated_at = DateTimeField(null=False)
     deleted_at = DateTimeField()
@@ -207,8 +191,8 @@ class WfRun(Model):
     workflow_id = ForeignKey(to_model=WfWorkflow, to_column="id", null=False)
     status = TextField(null=False, default="pending")
     trigger_type = TextField(null=False, default="manual")
-    input = TypedJSONBField(WfRunInput, null=False)
-    context = TypedJSONBField(WfRunContext, null=False)
+    input = JSONBField(null=False, default={})
+    context = JSONBField(null=False, default={})
     error = TextField()
     idempotency_key = TextField()
     started_at = DateTimeField()
@@ -240,7 +224,7 @@ class WfRunEvent(Model):
     run_id = ForeignKey(to_model=WfRun, to_column="id", null=False)
     step_id = TextField()
     event_type = TextField(null=False)
-    payload = TypedJSONBField(WfRunEventPayload, null=False)
+    payload = JSONBField(null=False, default={})
     created_at = DateTimeField(null=False)
     _inverse_foreign_keys: ClassVar[dict[str, dict[str, str]]] = {}
     _database = "flow_matrx"
@@ -254,8 +238,8 @@ class WfStepRun(Model):
     step_id = TextField(null=False)
     step_type = TextField(null=False)
     status = TextField(null=False, default="pending")
-    input = TypedJSONBField(WfStepRunInput, null=False)
-    output = TypedJSONBField(WfStepRunOutput, null=False)
+    input = JSONBField(null=False, default={})
+    output = JSONBField(null=False, default={})
     error = TextField()
     attempt = IntegerField(null=False, default=1)
     started_at = DateTimeField()
@@ -277,7 +261,7 @@ class OrgDTO(BaseDTO):
     id: str
 
     @classmethod
-    async def from_model(cls, model: Model):
+    async def from_model(cls, model: "Model"):
         return cls(id=str(model.id))
 
 
@@ -297,7 +281,7 @@ class UserProfileDTO(BaseDTO):
     id: str
 
     @classmethod
-    async def from_model(cls, model: Model):
+    async def from_model(cls, model: "Model"):
         return cls(id=str(model.id))
 
 
@@ -317,7 +301,7 @@ class OrgMemberDTO(BaseDTO):
     id: str
 
     @classmethod
-    async def from_model(cls, model: Model):
+    async def from_model(cls, model: "Model"):
         return cls(id=str(model.id))
 
 
@@ -337,7 +321,7 @@ class ResourceShareDTO(BaseDTO):
     id: str
 
     @classmethod
-    async def from_model(cls, model: Model):
+    async def from_model(cls, model: "Model"):
         return cls(id=str(model.id))
 
 
@@ -357,7 +341,7 @@ class WfWorkflowDTO(BaseDTO):
     id: str
 
     @classmethod
-    async def from_model(cls, model: Model):
+    async def from_model(cls, model: "Model"):
         return cls(id=str(model.id))
 
 
@@ -377,7 +361,7 @@ class WfRunDTO(BaseDTO):
     id: str
 
     @classmethod
-    async def from_model(cls, model: Model):
+    async def from_model(cls, model: "Model"):
         return cls(id=str(model.id))
 
 
@@ -397,7 +381,7 @@ class WfRunEventDTO(BaseDTO):
     id: str
 
     @classmethod
-    async def from_model(cls, model: Model):
+    async def from_model(cls, model: "Model"):
         return cls(id=str(model.id))
 
 
@@ -417,7 +401,7 @@ class WfStepRunDTO(BaseDTO):
     id: str
 
     @classmethod
-    async def from_model(cls, model: Model):
+    async def from_model(cls, model: "Model"):
         return cls(id=str(model.id))
 
 

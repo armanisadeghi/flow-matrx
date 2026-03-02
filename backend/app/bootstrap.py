@@ -61,6 +61,15 @@ def bootstrap() -> None:
         "APP_ENV": app_settings.app_env,
         "LOG_LEVEL": app_settings.log.level,
         "LOG_FORMAT": app_settings.log.format,
+
+        # Primary DB — register_database_from_env reads directly from os.environ,
+        # so pydantic-settings loading .env into the model isn't enough on its own.
+        "FLOW_MATRX_DB_HOST": app_settings.primary_db.host,
+        "FLOW_MATRX_DB_PORT": str(app_settings.primary_db.port),
+        "FLOW_MATRX_DB_NAME": app_settings.primary_db.name,
+        "FLOW_MATRX_DB_USER": app_settings.primary_db.user,
+        "FLOW_MATRX_DB_PASSWORD": app_settings.primary_db.password.get_secret_value(),
+        "FLOW_MATRX_DB_PROTOCOL": app_settings.primary_db.protocol,
     }
 
     for key, value in _env_map.items():

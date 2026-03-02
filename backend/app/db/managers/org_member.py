@@ -4,9 +4,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from matrx_orm import BaseDTO, BaseManager, ModelView
+from matrx_orm import BaseManager, BaseDTO, ModelView
+from matrx_utils import vcprint
 
 from ..models import OrgMember
+
 
 # ---------------------------------------------------------------------------
 # ModelView (new) — opt-in projection layer.
@@ -15,7 +17,6 @@ from ..models import OrgMember
 # or pass view_class=OrgMemberView to super().__init__().
 # When active, the DTO path below is skipped automatically.
 # ---------------------------------------------------------------------------
-
 
 class OrgMemberView(ModelView[OrgMember]):
     """
@@ -53,13 +54,12 @@ class OrgMemberView(ModelView[OrgMember]):
 # manager subclass and this DTO will be bypassed automatically.
 # ---------------------------------------------------------------------------
 
-
 @dataclass
 class OrgMemberDTO(BaseDTO[OrgMember]):
     id: str
 
     async def _initialize_dto(self, model: OrgMember) -> None:
-        """Override to populate DTO fields from the model."""
+        '''Override to populate DTO fields from the model.'''
         self.id = str(model.id)
         await self._process_core_data(model)
         await self._process_metadata(model)
@@ -67,23 +67,23 @@ class OrgMemberDTO(BaseDTO[OrgMember]):
         self.initialized = True
 
     async def _process_core_data(self, model: OrgMember) -> None:
-        """Process core data from the model item."""
+        '''Process core data from the model item.'''
         pass
 
     async def _process_metadata(self, model: OrgMember) -> None:
-        """Process metadata from the model item."""
+        '''Process metadata from the model item.'''
         pass
 
     async def _initial_validation(self, model: OrgMember) -> None:
-        """Validate fields from the model item."""
+        '''Validate fields from the model item.'''
         pass
 
     async def _final_validation(self) -> bool:
-        """Final validation of the model item."""
+        '''Final validation of the model item.'''
         return True
 
     async def get_validated_dict(self) -> dict[str, Any]:
-        """Get the validated dictionary."""
+        '''Get the validated dictionary.'''
         await self._final_validation()
         return self.to_dict()
 
@@ -94,7 +94,6 @@ class OrgMemberDTO(BaseDTO[OrgMember]):
 #   1. Quick: set view_class = OrgMemberView  (replaces DTO automatically)
 #   2. Explicit: super().__init__(OrgMember, view_class=OrgMemberView)
 # ---------------------------------------------------------------------------
-
 
 class OrgMemberBase(BaseManager[OrgMember]):
     view_class = None  # DTO is used by default; set to OrgMemberView to opt in
@@ -138,22 +137,20 @@ class OrgMemberBase(BaseManager[OrgMember]):
     async def filter_org_members(self, **kwargs: Any) -> list[OrgMember]:
         return await self.filter_items(**kwargs)
 
-    async def get_or_create_org_member(
-        self, defaults: dict[str, Any] | None = None, **kwargs: Any
-    ) -> OrgMember | None:
+    async def get_or_create_org_member(self, defaults: dict[str, Any] | None = None, **kwargs: Any) -> OrgMember | None:
         return await self.get_or_create(defaults, **kwargs)
 
     async def get_org_member_with_org(self, id: Any) -> tuple[Any, Any]:
-        return await self.get_item_with_related(id, "org")
+        return await self.get_item_with_related(id, 'org')
 
     async def get_org_members_with_org(self) -> list[Any]:
-        return await self.get_items_with_related("org")
+        return await self.get_items_with_related('org')
 
     async def get_org_member_with_user_profile(self, id: Any) -> tuple[Any, Any]:
-        return await self.get_item_with_related(id, "user_profile")
+        return await self.get_item_with_related(id, 'user_profile')
 
     async def get_org_members_with_user_profile(self) -> list[Any]:
-        return await self.get_items_with_related("user_profile")
+        return await self.get_items_with_related('user_profile')
 
     async def load_org_members_by_org_id(self, org_id: Any) -> list[Any]:
         return await self.load_items(org_id=org_id)
@@ -181,6 +178,7 @@ class OrgMemberBase(BaseManager[OrgMember]):
         return self.active_item_ids
 
 
+
 class OrgMemberManager(OrgMemberBase):
     _instance: OrgMemberManager | None = None
 
@@ -194,6 +192,5 @@ class OrgMemberManager(OrgMemberBase):
 
     async def _initialize_runtime_data(self, item: OrgMember) -> None:
         pass
-
 
 org_member_manager_instance = OrgMemberManager()

@@ -23,7 +23,7 @@ def _definition_to_dict(definition: object) -> dict:
 @router.get("/", response_model=list[WorkflowResponse])
 async def list_workflows_endpoint() -> list[WorkflowResponse]:
     user_id = "this-will-come-from-context-later"
-    return await wf_core.get_workflow_responses({"created_by": user_id})
+    return await wf_core.get_workflow_responses({"user_id": user_id})
 
 
 @router.post("/", response_model=WorkflowResponse, status_code=status.HTTP_201_CREATED)

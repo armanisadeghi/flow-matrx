@@ -8,7 +8,6 @@ version = "0.1.0"
 description = "Flow Matrx – AI Workflow Engine Backend"
 requires-python = ">=3.14"
 dependencies = [
-    "matrx-orm>=2.0.15",
     "fastapi>=0.131.0",
     "uvicorn[standard]>=0.41.0",
     "asyncpg>=0.31.0",
@@ -22,7 +21,7 @@ dependencies = [
     "orjson>=3.11.7",
     # --- Matrx ecosystem ---
     "matrx-utils>=1.0.11",
-    "matrx-orm>=2.0.39",
+    "matrx-orm>=3.0.8",
     "pytest>=8.3.0",
 ]
 

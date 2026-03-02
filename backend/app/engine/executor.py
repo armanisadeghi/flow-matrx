@@ -6,6 +6,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 import structlog
+from matrx_utils import vcprint
 
 from app.engine.exceptions import (
     EngineError,
@@ -98,17 +99,30 @@ class WorkflowEngine:
         from app.db.custom import wf_core
 
         run = await wf_core.get_run(run_id)
+        vcprint(run, f"[EXECUTOR] execute_run Run: {run_id}", color="cyan")
         if run is None:
             raise EngineError(f"Run {run_id} not found")
 
         workflow = await wf_core.get_workflow(run.workflow_id)
+        vcprint(workflow, f"[EXECUTOR] execute_run Workflow: {run.workflow_id}", color="cyan")
         if workflow is None:
             raise EngineError(f"Workflow {run.workflow_id} not found")
 
         definition = workflow.definition
-        if not hasattr(definition, "nodes"):
+        vcprint(definition, f"[EXECUTOR] execute_run Definition: {definition}", color="cyan")
+        if isinstance(definition, dict):
+            nodes = definition.get("nodes")
+            edges = definition.get("edges", [])
+        elif hasattr(definition, "nodes"):
+            nodes = definition.nodes
+            edges = definition.edges
+        else:
+            nodes = None
+            edges = []
+        if not nodes:
             raise EngineError(f"Workflow {workflow.id} has invalid definition format")
-        graph = WorkflowGraph(definition.nodes, definition.edges)  # type: ignore[union-attr]
+        graph = WorkflowGraph(nodes, edges)
+        vcprint(graph, f"[EXECUTOR] execute_run Graph: {graph}", color="cyan")
         context: dict[str, Any] = dict(run.context) if run.context else {}
 
         if run.input:

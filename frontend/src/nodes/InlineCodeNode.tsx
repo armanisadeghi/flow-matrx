@@ -1,6 +1,6 @@
 import type { NodeProps } from "@xyflow/react";
 import BaseNode from "./BaseNode";
 
-export default function InlineCodeNode(props: NodeProps) {
-  return <BaseNode {...props} color="bg-yellow-900" />;
+export default function InlineCodeNode({ id, data }: NodeProps) {
+  return <BaseNode id={id} data={data} color="bg-yellow-900" />;
 }

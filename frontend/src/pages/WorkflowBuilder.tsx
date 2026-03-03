@@ -24,7 +24,7 @@ export default function WorkflowBuilder() {
   }, [workflow, setWorkflow]);
 
   return (
-    <div className="flex h-screen">
+    <div className="flex h-full">
       <StepPalette />
       <div className="flex-1">
         <Canvas />

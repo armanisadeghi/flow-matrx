@@ -10,7 +10,8 @@ export type StepType =
   | "send_email"
   | "webhook"
   | "delay"
-  | "for_each";
+  | "for_each"
+  | "function_call";
 
 export interface WorkflowNode {
   id: string;

@@ -1,6 +1,6 @@
 import type { NodeProps } from "@xyflow/react";
 import BaseNode from "./BaseNode";
 
-export default function HttpRequestNode(props: NodeProps) {
-  return <BaseNode {...props} color="bg-blue-900" />;
+export default function HttpRequestNode({ id, data }: NodeProps) {
+  return <BaseNode id={id} data={data} color="bg-blue-900" />;
 }

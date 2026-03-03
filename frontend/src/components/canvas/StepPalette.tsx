@@ -13,6 +13,7 @@ const STEP_TYPES: { type: StepType; label: string; color: string }[] = [
   { type: "webhook", label: "Webhook", color: "bg-indigo-600" },
   { type: "delay", label: "Delay", color: "bg-slate-600" },
   { type: "for_each", label: "For Each", color: "bg-emerald-600" },
+  { type: "function_call", label: "Function Call", color: "bg-violet-600" },
 ];
 
 export default function StepPalette() {

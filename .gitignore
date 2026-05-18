@@ -33,3 +33,7 @@ Thumbs.db
 
 # Docker
 *.log
+
+# macOS Finder metadata
+.DS_Store
+**/.DS_Store
